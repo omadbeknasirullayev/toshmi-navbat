@@ -14,7 +14,7 @@ import { CreateCatchupScheduleDto } from "./dto/create-catchup-schedule.dto";
 import { UpdateCatchupScheduleDto } from "./dto/update-catchup-schedule.dto";
 import { CurrentUser } from "src/common/decorator/current-user";
 import { AuthPayload } from "src/common/type";
-import { ApiTags } from "@nestjs/swagger";
+import { ApiOperation, ApiTags } from "@nestjs/swagger";
 import { JwtAuthGuard } from "../auth/user/AuthGuard";
 import { RolesGuard } from "../auth/roles/RoleGuard";
 import { RolesDecorator } from "../auth/roles/RolesDecorator";
@@ -44,6 +44,7 @@ export class CatchupScheduleController {
 	}
 
 	@Get()
+	@ApiOperation({ summary: "for admin" })
 	findAll() {
 		return this.catchupScheduleService.findAll({
 			where: { isDeleted: false },
@@ -52,24 +53,28 @@ export class CatchupScheduleController {
 	}
 
 	@Get("by-student")
+	@ApiOperation({ summary: "for student" })
 	@RolesDecorator(RolesEnum.STUDENT)
 	findByStudent(@CurrentUser() user: AuthPayload) {
 		return this.catchupScheduleService.findByStudentId(user.id);
 	}
 
 	@Get("queue-student")
+	@ApiOperation({ summary: "for student" })
 	@RolesDecorator(RolesEnum.STUDENT)
 	getQueueStudent(@CurrentUser() user: AuthPayload) {
 		return this.catchupScheduleService.getQueueStudent(user.id);
 	}
 
 	@Get("pending-students/:catchupScheduleId")
+	@ApiOperation({ summary: "for all" })
 	@Public()
 	pendingStudents(@Param("catchupScheduleId", ParseIntPipe) catchupScheduleId: number) {
 		return this.catchupScheduleService.pendingStudents(catchupScheduleId);
 	}
 
 	@Get(":id")
+	@ApiOperation({ summary: "for admin" })
 	findOne(@Param("id", ParseIntPipe) id: number) {
 		return this.catchupScheduleService.findOneBy({
 			where: { id, isDeleted: false, isActive: true },
@@ -77,6 +82,7 @@ export class CatchupScheduleController {
 	}
 
 	@Patch(":id")
+	@ApiOperation({ summary: "for admin" })
 	update(
 		@Param("id", ParseIntPipe) id: number,
 		@Body() updateCatchupScheduleDto: UpdateCatchupScheduleDto,
@@ -85,6 +91,7 @@ export class CatchupScheduleController {
 	}
 
 	@Delete(":id")
+	@ApiOperation({ summary: "for admin" })
 	remove(@Param("id", ParseIntPipe) id: number) {
 		return this.catchupScheduleService.remove(+id);
 	}

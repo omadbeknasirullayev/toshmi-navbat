@@ -18,7 +18,7 @@ import { ILike } from "typeorm";
 import { JwtAuthGuard } from "../auth/user/AuthGuard";
 import { RolesGuard } from "../auth/roles/RoleGuard";
 import { Public } from "../auth/decorator";
-import { ApiBearerAuth, ApiOperation } from "@nestjs/swagger";
+import { ApiBearerAuth, ApiOperation, ApiTags } from "@nestjs/swagger";
 import { RolesDecorator } from "../auth/roles/RolesDecorator";
 import { RolesEnum } from "src/common/database/Enums";
 import { CurrentUser } from "src/common/decorator/current-user";
@@ -27,6 +27,7 @@ import { AuthPayload } from "src/common/type";
 @UseGuards(JwtAuthGuard, RolesGuard)
 @ApiBearerAuth()
 @Controller("admin")
+@ApiTags("Admin")
 export class AdminController {
 	constructor(private readonly adminService: AdminService) {}
 
