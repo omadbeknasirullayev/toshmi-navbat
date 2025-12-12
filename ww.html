@@ -1,0 +1,312 @@
+<!DOCTYPE html>
+<html lang="uz">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NestJS Chat Client</title>
+    <script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background-color: #f4f7f6;
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            box-sizing: border-box;
+        }
+        h2 {
+            text-align: center;
+            color: #333;
+        }
+        #connection-area {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 15px;
+            flex-wrap: wrap;
+        }
+        #connection-area input {
+            flex: 1;
+            padding: 10px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            min-width: 150px;
+        }
+        #connection-area button {
+            padding: 10px 15px;
+            background-color: #007bff;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-weight: bold;
+        }
+        #connection-area button:hover {
+            background-color: #0056b3;
+        }
+
+        #chat-window {
+            flex-grow: 1;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            background-color: #ffffff;
+            overflow-y: auto;
+            padding: 15px;
+            margin-bottom: 15px;
+        }
+        #logs, #messages {
+            list-style-type: none;
+            padding: 0;
+            margin: 0;
+        }
+        #logs li {
+            font-style: italic;
+            color: #555;
+            margin-bottom: 5px;
+            font-size: 0.9em;
+        }
+        #logs li.error {
+            color: #d9534f;
+            font-weight: bold;
+        }
+         #logs li.success {
+            color: #5cb85c;
+            font-weight: bold;
+        }
+        #messages li {
+            margin-bottom: 10px;
+            padding: 8px 12px;
+            border-radius: 10px;
+            max-width: 70%;
+            word-wrap: break-word;
+        }
+        #messages li.user-message {
+            background-color: #e1ffc7;
+            align-self: flex-start;
+        }
+        #messages li strong {
+            color: #0056b3;
+            display: block;
+            font-size: 0.8em;
+            margin-bottom: 3px;
+        }
+
+        #message-form {
+            display: flex;
+            gap: 10px;
+        }
+        #message-input {
+            flex-grow: 1;
+            padding: 10px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+        }
+        #message-form button {
+            padding: 10px 20px;
+            background-color: #28a745;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-weight: bold;
+        }
+        #message-form button:hover {
+            background-color: #218838;
+        }
+        
+        fieldset {
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            padding: 15px;
+            margin-bottom: 15px;
+        }
+        legend {
+            font-weight: bold;
+            color: #333;
+        }
+    </style>
+</head>
+<body>
+
+    <h2>Chat Client (Socket.IO)</h2>
+
+    <fieldset>
+        <legend>Ulanish</legend>
+        <div id="connection-area">
+            <input type="text" id="server-url" value="http://localhost:3000" placeholder="Server Manzili (masalan, http://localhost:3000)">
+            <input type="text" id="jwt-token" placeholder="JWT Token-ni kiriting">
+            <input type="text" id="conversation-id" placeholder="Suhbat ID (conversationId)">
+            <button id="connect-btn">Ulanish va Qo'shilish</button>
+        </div>
+    </fieldset>
+
+
+    <fieldset id="chat-controls" style="display: none;">
+        <legend>Suhbat</legend>
+        <div id="chat-window">
+            <ul id="logs"></ul>
+            <hr>
+            <ul id="messages"></ul>
+        </div>
+        <form id="message-form">
+            <input type="text" id="message-input" placeholder="Xabarni kiriting..." autocomplete="off">
+            <button type="submit">Yuborish</button>
+        </form>
+    </fieldset>
+
+    <script>
+        // DOM elementlari
+        const serverUrlInput = document.getElementById('server-url');
+        const tokenInput = document.getElementById('jwt-token');
+        const conversationIdInput = document.getElementById('conversation-id');
+        const connectBtn = document.getElementById('connect-btn');
+        
+        const chatControls = document.getElementById('chat-controls');
+        const messageForm = document.getElementById('message-form');
+        const messageInput = document.getElementById('message-input');
+        
+        const logsList = document.getElementById('logs');
+        const messagesList = document.getElementById('messages');
+
+        let socket = null;
+
+        // Yordamchi funksiya: Jurnallarga yozish
+        function log(message, type = '') {
+            const li = document.createElement('li');
+            li.textContent = `[${new Date().toLocaleTimeString()}] ${message}`;
+            if (type) {
+                li.className = type;
+            }
+            logsList.appendChild(li);
+            // Avto-skroll
+            const chatWindow = document.getElementById('chat-window');
+            chatWindow.scrollTop = chatWindow.scrollHeight;
+        }
+
+        // Yordamchi funksiya: Xabarni ko'rsatish
+        function displayMessage(data) {
+            const li = document.createElement('li');
+            li.className = 'user-message';
+            
+            // Backend-dan kelgan ma'lumotlarga moslang
+            const senderInfo = `<strong>${data.senderType} (${data.senderId || 'Noma\'lum'})</strong>`;
+            li.innerHTML = `${senderInfo}${data.content}`;
+            
+            messagesList.appendChild(li);
+            // Avto-skroll
+            const chatWindow = document.getElementById('chat-window');
+            chatWindow.scrollTop = chatWindow.scrollHeight;
+            
+            // Xabarni o'qilgan deb belgilash (agar backend'dan ID kelsa)
+            if (data.id && socket) {
+                log(`Serverga "markAsRead" yuborilmoqda: ${data.id}`);
+                socket.emit("markAsRead", { messageId: data.id });
+            }
+        }
+
+        // 1. Ulanish tugmasi bosilganda
+        connectBtn.addEventListener('click', () => {
+            const serverUrl = serverUrlInput.value;
+            const token = tokenInput.value;
+            const conversationId = conversationIdInput.value;
+
+            if (!serverUrl || !token || !conversationId) {
+                log("Server manzili, Token va Suhbat ID kiritilishi shart!", 'error');
+                return;
+            }
+
+            // Agar avvalgi ulanish mavjud bo'lsa, uzish
+            if (socket) {
+                socket.disconnect();
+            }
+
+            // ChatGateway'dagi 'namespace: "chat"' ga moslash
+            const socketUrl = `${serverUrl}/chat`;
+
+            log(`"${socketUrl}" manziliga ulanilmoqda...`);
+
+            // ChatGateway'dagi handleConnection'ga token yuborish
+            socket = io(socketUrl, {
+                // `client.handshake.auth.token` orqali yuborish
+                auth: {
+                    token: token
+                },
+                // Yoki `client.handshake.query.token` orqali
+                // query: {
+                //     token: token
+                // }
+            });
+
+            // ----- SOCKET HODISALARINI TINGLASH -----
+
+            // 'connect' - Ulanish muvaffaqiyatli bo'lganda
+            socket.on('connect', () => {
+                log('Socket serverga muvaffaqiyatli ulandi!', 'success');
+                chatControls.style.display = 'block'; // Chat oynasini ko'rsatish
+
+
+                // 2. Ulangandan so'ng darhol xonaga qo'shilish
+                log(`"${conversationId}" xonasiga qo'shilmoqda...`);
+                socket.emit('joinRoom', { conversationId: conversationId });
+            });
+
+            // 'disconnect' - Ulanish uzilganda
+            socket.on('disconnect', (reason) => {
+                log(`Ulanish uzildi: ${reason}`, 'error');
+                chatControls.style.display = 'none'; // Chat oynasini yashirish
+            });
+
+            // 'error' (Gateway'dan keladigan maxsus xato)
+            socket.on('error', (data) => {
+                log(`Server xatosi: ${data.message} (${data.details || ''})`, 'error');
+            });
+
+            // 'joinedRoom' (Gateway'dan keladigan 'joinRoom'ga javob)
+            socket.on('joinedRoom', (data) => {
+                log(data.message, 'success');
+            });
+
+            // 'newMessage' (Yangi xabar kelganda)
+            socket.on('newMessage', (data) => {
+                log(`Yangi xabar qabul qilindi...`);
+                displayMessage(data);
+            });
+        });
+
+        // 3. Xabar yuborish formasi
+        messageForm.addEventListener('submit', (e) => {
+            e.preventDefault();
+            const messageText = messageInput.value;
+            const conversationId = conversationIdInput.value;
+
+            if (!messageText) {
+                return;
+            }
+
+            if (!socket || !socket.connected) {
+                log("Serverga ulanmagansiz!", 'error');
+                return;
+            }
+
+            // 'sendMessage' hodisasini serverga yuborish
+            socket.emit('sendMessage', {
+                conversationId: conversationId,
+                content: messageText
+            });
+
+            // O'zimizning xabarni ham ekranga chiqaramiz (ixtiyoriy, serverdan qaytib kelishini kutsa ham bo'ladi)
+            // displayMessage({
+            //     senderType: 'MEN',
+            //     senderId: 'Siz',
+            //     content: messageText
+            // });
+
+            messageInput.value = ''; // Inputni tozalash
+        });
+
+    </script>
+</body>
+</html>
+
+<!-- eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6ImViMTQ1MjEyLWMxYzMtNDUwNS1iMzQ0LTU4YmE1Yzc1ZmNiNSIsInJvbGUiOiJzdXBlcl9hZG1pbiIsImlhdCI6MTc2MTk5MzA4NiwiZXhwIjoxNzY3OTkzMDg2fQ.HjmmT9mvOpv3DXrPlMvvOumBiC8Fi8OvCUlfnu4UPik -->
