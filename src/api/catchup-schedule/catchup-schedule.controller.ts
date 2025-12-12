@@ -56,6 +56,12 @@ export class CatchupScheduleController {
 		return this.catchupScheduleService.findByStudentId(user.id);
 	}
 
+	@Get("queue-student")
+	@RolesDecorator(RolesEnum.STUDENT)
+	getQueueStudent(@CurrentUser() user: AuthPayload) {
+		return this.catchupScheduleService.getQueueStudent(user.id);
+	}
+
 	@Get(":id")
 	findOne(@Param("id", ParseIntPipe) id: number) {
 		return this.catchupScheduleService.findOneBy({

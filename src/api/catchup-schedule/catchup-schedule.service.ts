@@ -139,4 +139,14 @@ export class CatchupScheduleService extends BaseService<
 
 		return catchupScheduleStudent;
 	}
+
+	async getQueueStudent(studentId: number) {
+		return await this.catchupScheduleStudentRepo.find({
+			where: {
+				studentId,
+				status: "pending",
+			},
+			relations: { student: { facultet: true }, catchupSchedule: true },
+		});
+	}
 }
