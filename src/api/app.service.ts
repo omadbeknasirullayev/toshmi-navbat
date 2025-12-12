@@ -60,7 +60,7 @@ export default class Application {
 				name: "accept-language",
 				in: "header",
 			})
-			// .addBearerAuth()
+			.addBearerAuth()
 			.build();
 		const document = SwaggerModule.createDocument(app, swaggerConfig);
 		SwaggerModule.setup("docs", app, document);
