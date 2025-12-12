@@ -53,8 +53,8 @@ export default class Application {
 		);
 
 		const swaggerConfig = new DocumentBuilder()
-			.setTitle("Railway control API")
-			.setDescription("Railway control API")
+			.setTitle("Toshmi navbat API")
+			.setDescription("Toshmi navbat system API for managing schedules and appointments")
 			.setVersion("1.0.0")
 			.addGlobalParameters({
 				name: "accept-language",
