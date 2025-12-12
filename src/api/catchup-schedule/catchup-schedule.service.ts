@@ -7,6 +7,8 @@ import { InjectRepository } from "@nestjs/typeorm";
 import { MoreThanOrEqual, Not, Repository } from "typeorm";
 import { Student } from "src/common/database/enity";
 import { CatchupScheduleStudent } from "src/common/database/enity/catchup-schedule-student.entity";
+import { Cron } from "@nestjs/schedule";
+import { CatchupScheduleStudentStatus } from "src/common/database/Enums";
 
 @Injectable()
 export class CatchupScheduleService extends BaseService<
@@ -148,5 +150,19 @@ export class CatchupScheduleService extends BaseService<
 			},
 			relations: { student: { facultet: true }, catchupSchedule: true },
 		});
+	}
+
+	async pendingStudents(catchupScheduleId: number) {
+		const catchup = await this.repo.find({
+			where: {
+				id: catchupScheduleId,
+				isActive: true,
+				isDeleted: false,
+				students: { status: CatchupScheduleStudentStatus.PENDING },
+			},
+			relations: { building: true, students: { student: true } },
+		});
+
+		return catchup;
 	}
 }

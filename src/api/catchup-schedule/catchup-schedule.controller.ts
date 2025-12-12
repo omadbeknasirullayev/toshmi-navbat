@@ -20,6 +20,7 @@ import { RolesGuard } from "../auth/roles/RoleGuard";
 import { RolesDecorator } from "../auth/roles/RolesDecorator";
 import { RolesEnum } from "src/common/database/Enums";
 import { WriteQueueDto } from "./dto/write-queue.dto";
+import { Public } from "../auth/decorator";
 
 @Controller("catchup-schedule")
 @UseGuards(JwtAuthGuard, RolesGuard)
@@ -60,6 +61,12 @@ export class CatchupScheduleController {
 	@RolesDecorator(RolesEnum.STUDENT)
 	getQueueStudent(@CurrentUser() user: AuthPayload) {
 		return this.catchupScheduleService.getQueueStudent(user.id);
+	}
+
+	@Get("pending-students/:catchupScheduleId")
+	@Public()
+	pendingStudents(@Param("catchupScheduleId", ParseIntPipe) catchupScheduleId: number) {
+		return this.catchupScheduleService.pendingStudents(catchupScheduleId);
 	}
 
 	@Get(":id")
