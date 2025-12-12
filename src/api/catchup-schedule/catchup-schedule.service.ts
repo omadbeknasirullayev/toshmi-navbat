@@ -165,4 +165,19 @@ export class CatchupScheduleService extends BaseService<
 
 		return catchup;
 	}
+
+	async toArrivedStudent(catchupScheduleStudentId: number) {
+		const catchupScheduleStudent = await this.catchupScheduleStudentRepo.findOne({
+			where: { id: catchupScheduleStudentId },
+		});
+
+		if (!catchupScheduleStudent) {
+			throw new HttpException("Catchup schedule student not found", 404);
+		}
+
+		catchupScheduleStudent.status = CatchupScheduleStudentStatus.ARRIVED;
+		await this.catchupScheduleStudentRepo.save(catchupScheduleStudent);
+
+		return catchupScheduleStudent;
+	}
 }

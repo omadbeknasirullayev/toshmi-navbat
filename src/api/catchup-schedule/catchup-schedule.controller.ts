@@ -30,21 +30,29 @@ export class CatchupScheduleController {
 	constructor(private readonly catchupScheduleService: CatchupScheduleService) {}
 
 	@Post()
+	@ApiOperation({
+		summary: "for admin",
+		description: "Adminlar catchup schedule ya'ni otrabotka jadvallarini yaratish uchun",
+	})
 	create(@Body() createCatchupScheduleDto: CreateCatchupScheduleDto) {
 		return this.catchupScheduleService.create(createCatchupScheduleDto);
 	}
 
 	@Post("register-queue")
 	@RolesDecorator(RolesEnum.STUDENT)
-	writeQueueStudent(
-		@Body() body: WriteQueueDto,
-		@CurrentUser() user: AuthPayload,
-	) {
+	@ApiOperation({
+		summary: "for student",
+		description: "Studentlar catchup schedulega yani otrabotka jadvaliga navbat olishi uchun",
+	})
+	writeQueueStudent(@Body() body: WriteQueueDto, @CurrentUser() user: AuthPayload) {
 		return this.catchupScheduleService.writeQueueStudent(user.id, body.catchupScheduleId);
 	}
 
 	@Get()
-	@ApiOperation({ summary: "for admin" })
+	@ApiOperation({
+		summary: "for admin",
+		description: "Adminlar catchup schedule ya'ni otrabotka jadvallarini ko'rish uchun",
+	})
 	findAll() {
 		return this.catchupScheduleService.findAll({
 			where: { isDeleted: false },
@@ -53,23 +61,43 @@ export class CatchupScheduleController {
 	}
 
 	@Get("by-student")
-	@ApiOperation({ summary: "for student" })
+	@ApiOperation({
+		summary: "for student",
+		description: "Studentlar catchup schedulega yani otrabotka jadvallarini ko'rish uchun",
+	})
 	@RolesDecorator(RolesEnum.STUDENT)
 	findByStudent(@CurrentUser() user: AuthPayload) {
 		return this.catchupScheduleService.findByStudentId(user.id);
 	}
 
 	@Get("queue-student")
-	@ApiOperation({ summary: "for student" })
 	@RolesDecorator(RolesEnum.STUDENT)
+	@ApiOperation({
+		summary: "for student",
+		description:
+			"Studentlar catchup schedulega yani otrabotka jadvaliga olingan o'rnini ko'rish uchun",
+	})
 	getQueueStudent(@CurrentUser() user: AuthPayload) {
 		return this.catchupScheduleService.getQueueStudent(user.id);
 	}
 
 	@Get("pending-students/:catchupScheduleId")
-	@ApiOperation({ summary: "for all" })
+	@ApiOperation({
+		summary: "for all",
+		description: "Umumiy monitorda shu jadval uchun hali kelmagan studentlarni ko'rish uchun",
+	})
 	@Public()
 	pendingStudents(@Param("catchupScheduleId", ParseIntPipe) catchupScheduleId: number) {
+		return this.catchupScheduleService.pendingStudents(catchupScheduleId);
+	}
+
+	@Get("pending-students-admin/:catchupScheduleId")
+	@ApiOperation({
+		summary: "for admin",
+		description:
+			"adminlar uchun catchup schedule yani otrabotka ga yozilgan studentlarni ko'rish uchun",
+	})
+	pendingStudentsAdmin(@Param("catchupScheduleId", ParseIntPipe) catchupScheduleId: number) {
 		return this.catchupScheduleService.pendingStudents(catchupScheduleId);
 	}
 
@@ -79,6 +107,18 @@ export class CatchupScheduleController {
 		return this.catchupScheduleService.findOneBy({
 			where: { id, isDeleted: false, isActive: true },
 		});
+	}
+
+	@Patch("toArrived-student/:catchupScheduleStudentId")
+	@ApiOperation({
+		summary: "for admin",
+		description:
+			"Adminlar catchup schedule studentlar dagi id ni yuboradi. Student olgan navbat  keldiga o'zgatirish uchun",
+	})
+	toArrivedStudent(
+		@Param("catchupScheduleStudentId", ParseIntPipe) catchupScheduleStudentId: number,
+	) {
+		return this.catchupScheduleService.toArrivedStudent(catchupScheduleStudentId);
 	}
 
 	@Patch(":id")
