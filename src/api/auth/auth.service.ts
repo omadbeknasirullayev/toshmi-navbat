@@ -1,10 +1,10 @@
 import { HttpException, Injectable, NotFoundException } from "@nestjs/common";
 import { JwtToken } from "src/infrastructure/lib/jwt-token";
-import { SendOtpCodeDto } from "./dto/send-otp-code.dto";
+
 import { InjectRepository } from "@nestjs/typeorm";
 import { LessThan, LessThanOrEqual, MoreThan, MoreThanOrEqual, Repository } from "typeorm";
 import axios from "axios";
-import { VerifySmsCodeDto } from "./dto/verify-sms-code.dto";
+
 import { errorPrompt } from "src/infrastructure/lib/prompts/errorPrompt";
 import { RolesEnum } from "src/common/database/Enums";
 import { LoginDto } from "./dto/login.dto";
