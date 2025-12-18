@@ -1,6 +1,5 @@
 import { ApiProperty } from "@nestjs/swagger";
-import { Column } from "typeorm";
-import { IsNotEmpty, Min } from "class-validator";
+import { IsNotEmpty, Min, Matches } from "class-validator";
 
 export class CreateCatchupScheduleDto {
   @ApiProperty()
@@ -20,4 +19,18 @@ export class CreateCatchupScheduleDto {
   @IsNotEmpty()
   @Min(1)
   public buildingId!: number;
+
+  @ApiProperty({ example: "14:00", description: "Boshlanish vaqti (HH:mm formatda)" })
+  @IsNotEmpty()
+  @Matches(/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/, {
+    message: "startTime must be in HH:mm format (e.g., 14:00)"
+  })
+  public startTime!: string;
+
+  @ApiProperty({ example: "16:00", description: "Tugash vaqti (HH:mm formatda)" })
+  @IsNotEmpty()
+  @Matches(/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/, {
+    message: "endTime must be in HH:mm format (e.g., 16:00)"
+  })
+  public endTime!: string;
 }

@@ -13,6 +13,7 @@ export type AppConfigType = {
 	PATH_FOR_FILE_UPLOAD: string;
 	TOKEN_KEY: string;
 	TOKEN_EXPIRE: number;
+	CATCHUP_SCHEDULE_INTERVAL: number;
 };
 
 const requiredVariables = [
@@ -26,6 +27,7 @@ const requiredVariables = [
 	"PATH_FOR_FILE_UPLOAD",
 	"TOKEN_KEY",
 	"TOKEN_EXPIRE",
+	"CATCHUP_SCHEDULE_INTERVAL",
 ];
 
 const missingVariables = requiredVariables.filter((variable) => {
@@ -51,4 +53,5 @@ export const appConfig: AppConfigType = {
 	PATH_FOR_FILE_UPLOAD: process.env.PATH_FOR_FILE_UPLOAD as string,
 	TOKEN_KEY: process.env.TOKEN_KEY as string,
 	TOKEN_EXPIRE: parseInt(process.env.TOKEN_EXPIRE as string, 10),
+	CATCHUP_SCHEDULE_INTERVAL: parseInt(process.env.CATCHUP_SCHEDULE_INTERVAL as string, 10),
 };

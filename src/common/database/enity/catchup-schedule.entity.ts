@@ -23,6 +23,15 @@ export class CatchupSchedule extends BaseEntity {
 	@Column({ type: "int", name: "attendeesCount", default: 0 })
 	public attendeesCount!: number;
 
+	@Column({ type: "time", name: "startTime", nullable: true })
+	public startTime!: string;
+
+	@Column({ type: "time", name: "endTime", nullable: true })
+	public endTime!: string;
+
+	@Column({ type: "json", name: "timeSlots", default: [] })
+	public timeSlots!: string[];
+
 	@ManyToOne(() => Building, (building) => building.catchupSchedules)
 	public building?: Building;
   

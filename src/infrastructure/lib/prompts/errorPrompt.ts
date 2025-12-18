@@ -2738,6 +2738,19 @@ export function parseIfItsPrompt(error: unknown) {
 	console.log(error);
 }
 
+
+
+
+
+
+
+
+
+
+
+
+
+
 export const errorPrompt = {
 	codeExpiredOrNotFoundError: {
 		status: "BAD_REQUEST",
@@ -2861,6 +2874,129 @@ export const errorPrompt = {
 		message: {
 			uz: "Xodimlar topilmadi!",
 			ru: "Сотрудники не найдены!",
+		},
+	},
+
+	// Catchup Schedule Errors
+	startTimeBeforeEndTime: {
+		status: "BAD_REQUEST",
+		message: {
+			uz: "Boshlanish vaqti tugash vaqtidan oldin bo'lishi kerak!",
+			ru: "Время начала должно быть раньше времени окончания!",
+		},
+	},
+	catchupScheduleTimeOverlap: {
+		status: "BAD_REQUEST",
+		message: {
+			uz: "Ushbu bino va sana uchun jadval allaqachon mavjud. Iltimos, boshqa vaqt oralig'ini tanlang!",
+			ru: "Расписание для этого здания и даты уже существует с пересекающимся временем. Пожалуйста, выберите другой временной диапазон!",
+		},
+	},
+	noTimeSlotsGenerated: {
+		status: "BAD_REQUEST",
+		message: {
+			uz: "Vaqt oralig'i yaratilmadi. Iltimos, boshlanish va tugash vaqtini tekshiring!",
+			ru: "Временные интервалы не созданы. Пожалуйста, проверьте время начала и окончания!",
+		},
+	},
+	catchupScheduleAlreadyExists: {
+		status: "BAD_REQUEST",
+		message: {
+			uz: "Ushbu bino va sana uchun jadval allaqachon mavjud!",
+			ru: "Расписание для этого здания и даты уже существует!",
+		},
+	},
+	studentNotFound: {
+		status: "NOT_FOUND",
+		message: {
+			uz: "Student topilmadi!",
+			ru: "Студент не найден!",
+		},
+	},
+	catchupScheduleNotFound: {
+		status: "NOT_FOUND",
+		message: {
+			uz: "Otrabotka jadvali topilmadi!",
+			ru: "Расписание отработки не найдено!",
+		},
+	},
+	timeSlotNotAvailable: {
+		status: "BAD_REQUEST",
+		message: {
+			uz: "Tanlangan vaqt oralig'i ushbu jadvalda mavjud emas!",
+			ru: "Выбранный временной интервал недоступен в этом расписании!",
+		},
+	},
+	studentAlreadyRegistered: {
+		status: "BAD_REQUEST",
+		message: {
+			uz: "Student allaqachon ushbu otrabotka jadvaliga yozilgan!",
+			ru: "Студент уже зарегистрирован на эту отработку!",
+		},
+	},
+	timeSlotFullyBooked: {
+		status: "BAD_REQUEST",
+		message: {
+			uz: "Ushbu vaqt oralig'i to'liq band!",
+			ru: "Этот временной интервал полностью забронирован!",
+		},
+	},
+	invalidQrCodeFormat: {
+		status: "BAD_REQUEST",
+		message: {
+			uz: "Noto'g'ri QR kod formati!",
+			ru: "Неверный формат QR-кода!",
+		},
+	},
+	invalidQrCodeData: {
+		status: "BAD_REQUEST",
+		message: {
+			uz: "Noto'g'ri QR kod ma'lumotlari!",
+			ru: "Неверные данные QR-кода!",
+		},
+	},
+	studentRegistrationNotFound: {
+		status: "NOT_FOUND",
+		message: {
+			uz: "Student ro'yxatdan o'tmagan!",
+			ru: "Регистрация студента не найдена!",
+		},
+	},
+	studentAlreadyArrived: {
+		status: "BAD_REQUEST",
+		message: {
+			uz: "Student allaqachon keldi deb belgilangan!",
+			ru: "Студент уже отмечен как прибывший!",
+		},
+	},
+	cannotCheckInOutsideTimeSlots: {
+		status: "BAD_REQUEST",
+		message: {
+			uz: "Siz hozirgi vaqtda kira olmaysiz. Joriy vaqt hech bir rejalashtirilgan vaqt oralig'ida emas!",
+			ru: "Вы не можете зарегистрироваться в это время. Текущее время не находится в запланированных временных интервалах!",
+		},
+	},
+	cannotCheckInSlotFullyBooked: {
+		status: "BAD_REQUEST",
+		message: {
+			uz: "Kira olmaysiz. Sizning rejalashtirilgan vaqtingiz boshqa edi, lekin siz kelgan vaqt to'liq band!",
+			ru: "Невозможно зарегистрироваться. Ваше запланированное время было другим, но время прибытия полностью забронировано!",
+		},
+	},
+	catchupScheduleStudentNotFound: {
+		status: "NOT_FOUND",
+		message: {
+			uz: "Otrabotka jadvali studenti topilmadi!",
+			ru: "Студент расписания отработки не найден!",
+		},
+	},
+
+	// Student Service Errors
+	studentHemisIdAlreadyExists: {
+		status: "BAD_REQUEST",
+		message: {
+			uz: "Bu hemisId bilan student allaqachon mavjud!",
+			ru: "Студент с этим hemisId уже существует!",
 		},
 	},
 };

@@ -21,6 +21,7 @@ import { RolesDecorator } from "../auth/roles/RolesDecorator";
 import { RolesEnum } from "src/common/database/Enums";
 import { WriteQueueDto } from "./dto/write-queue.dto";
 import { Public } from "../auth/decorator";
+import { ScanQrDto } from "./dto/scan-qr.dto";
 
 @Controller("catchup-schedule")
 @UseGuards(JwtAuthGuard, RolesGuard)
@@ -42,10 +43,15 @@ export class CatchupScheduleController {
 	@RolesDecorator(RolesEnum.STUDENT)
 	@ApiOperation({
 		summary: "for student",
-		description: "Studentlar catchup schedulega yani otrabotka jadvaliga navbat olishi uchun",
+		description:
+			"Studentlar catchup schedulega yani otrabotka jadvaliga navbat olishi uchun. selectedTimeSlot tanlanadi va bir marta tanlab bo'lgach boshqa tanlay olmaydi",
 	})
 	writeQueueStudent(@Body() body: WriteQueueDto, @CurrentUser() user: AuthPayload) {
-		return this.catchupScheduleService.writeQueueStudent(user.id, body.catchupScheduleId);
+		return this.catchupScheduleService.writeQueueStudent(
+			user.id,
+			body.catchupScheduleId,
+			body.selectedTimeSlot,
+		);
 	}
 
 	@Get()
@@ -63,11 +69,23 @@ export class CatchupScheduleController {
 	@Get("by-student")
 	@ApiOperation({
 		summary: "for student",
-		description: "Studentlar catchup schedulega yani otrabotka jadvallarini ko'rish uchun",
+		description:
+			"Studentlar catchup schedulega yani otrabotka jadvallarini ko'rish uchun. Har bir vaqt uchun nechta student yozilganini ham ko'rsatadi",
 	})
 	@RolesDecorator(RolesEnum.STUDENT)
 	findByStudent(@CurrentUser() user: AuthPayload) {
 		return this.catchupScheduleService.findByStudentId(user.id);
+	}
+
+	@Get("time-slot-statistics/:catchupScheduleId")
+	@ApiOperation({
+		summary: "for all",
+		description:
+			"Har bir time slot uchun qancha student yozilganini ko'rish. Qaysi vaqtda bo'sh joy borligini aniqlash uchun",
+	})
+	@Public()
+	getTimeSlotStatistics(@Param("catchupScheduleId", ParseIntPipe) catchupScheduleId: number) {
+		return this.catchupScheduleService.getTimeSlotStatistics(catchupScheduleId);
 	}
 
 	@Get("queue-student")
@@ -103,10 +121,15 @@ export class CatchupScheduleController {
 
 	@Get(":id")
 	@ApiOperation({ summary: "for admin" })
-	findOne(@Param("id", ParseIntPipe) id: number) {
-		return this.catchupScheduleService.findOneBy({
-			where: { id, isDeleted: false, isActive: true },
-		});
+	async findOne(@Param("id", ParseIntPipe) id: number) {
+		const [catchupSchedule, timeSlotStatistics] = await Promise.all([
+			this.catchupScheduleService.findOneBy({
+				where: { id, isDeleted: false, isActive: true },
+			}),
+			this.catchupScheduleService.getTimeSlotStatistics(id),
+		]);
+
+		return { ...catchupSchedule, timeSlotStatistics };
 	}
 
 	@Patch("toArrived-student/:catchupScheduleStudentId")
@@ -119,6 +142,16 @@ export class CatchupScheduleController {
 		@Param("catchupScheduleStudentId", ParseIntPipe) catchupScheduleStudentId: number,
 	) {
 		return this.catchupScheduleService.toArrivedStudent(catchupScheduleStudentId);
+	}
+
+	@Post("scan-qr")
+	@ApiOperation({
+		summary: "for admin/scanner",
+		description:
+			"QR code scan qilib student keldini belgilash. QR code ichidagi JSON datani yuborish kerak",
+	})
+	scanQrCode(@Body() body: ScanQrDto) {
+		return this.catchupScheduleService.scanQrCode(body.qrData);
 	}
 
 	@Patch(":id")

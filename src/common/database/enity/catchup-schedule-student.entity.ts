@@ -14,6 +14,15 @@ export class CatchupScheduleStudent extends BaseEntity {
 	@Column({ type: "varchar", name: "status", default: "pending" })
 	public status!: string;
 
+	@Column({ type: "varchar", name: "selectedTimeSlot", nullable: true })
+	public selectedTimeSlot!: string;
+
+	@Column({ type: "int", name: "queueNumber", nullable: true })
+	public queueNumber!: number;
+
+	@Column({ type: "text", name: "qrCode", nullable: true })
+	public qrCode!: string;
+
 	@ManyToOne(() => CatchupSchedule, (catchupSchedule) => catchupSchedule.students)
 	public catchupSchedule!: CatchupSchedule;
 

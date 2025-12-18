@@ -6,6 +6,7 @@ import { Student } from "src/common/database/enity";
 import { InjectRepository } from "@nestjs/typeorm";
 import { Not, Repository } from "typeorm";
 import { BcryptEncryption } from "src/infrastructure/lib/bcrypt";
+import { errorPrompt } from "src/infrastructure/lib/prompts/errorPrompt";
 
 @Injectable()
 export class StudentService extends BaseService<CreateStudentDto, UpdateStudentDto, Student> {
@@ -27,7 +28,7 @@ export class StudentService extends BaseService<CreateStudentDto, UpdateStudentD
 		const existing = await this.repo.findOne({ where: { id, isDeleted: false } });
 
 		if (!existing) {
-			throw new HttpException("Student not found", 404);
+			throw new HttpException(errorPrompt.studentNotFound, 404);
 		}
 
 		if (dto.hemisId) {
@@ -35,7 +36,7 @@ export class StudentService extends BaseService<CreateStudentDto, UpdateStudentD
 				where: { hemisId: dto.hemisId, id: Not(id), isDeleted: false },
 			});
 			if (duplicate) {
-				throw new HttpException("Student with this hemisId already exists", 400);
+				throw new HttpException(errorPrompt.studentHemisIdAlreadyExists, 400);
 			}
 		}
 
