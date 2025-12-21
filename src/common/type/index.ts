@@ -16,6 +16,7 @@ export interface IResponse<T> {
 export interface AuthPayload {
 	id: number;
 	role: RolesEnum;
+	hemisId?: string;
 	phoneNumber: string;
 }
 

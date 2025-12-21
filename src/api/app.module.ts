@@ -11,6 +11,8 @@ import { StudentModule } from './student/student.module';
 import { FacultetModule } from './facultet/facultet.module';
 import { BuildingModule } from './building/building.module';
 import { CatchupScheduleModule } from './catchup-schedule/catchup-schedule.module';
+import { ExternalModule } from './external/external.module';
+import { TwoMbModule } from './two-mb/two-mb.module';
 
 
 @Module({
@@ -24,17 +26,13 @@ import { CatchupScheduleModule } from './catchup-schedule/catchup-schedule.modul
 		}),
 		NestScheduleModule.forRoot(),
 		AuthModule,
-		// StationModule,
-		// EmployeeModule,
-		// TrainScheduleModule,
-		// FaceLogModule,
-		// CameraDeviceModule,
-		// DataModule,
 		AdminModule,
 		StudentModule,
 		FacultetModule,
 		BuildingModule,
 		CatchupScheduleModule,
+		ExternalModule,
+		TwoMbModule,
 	],
 })
 export class AppModule implements NestModule {

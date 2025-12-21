@@ -3,14 +3,14 @@ import { ApiProperty } from "@nestjs/swagger";
 
 export class StudentLoginDto {
 	@ApiProperty({
-		example: "123456789",
+		example: "364211100841",
 	})
 	@IsNotEmpty()
 	@IsString()
 	public hemisId!: string;
 
 	@ApiProperty({
-		example: "12345",
+		example: "aziz7777",
 	})
 	@IsNotEmpty()
 	@IsString()

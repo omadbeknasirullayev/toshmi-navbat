@@ -43,6 +43,7 @@ export class JwtStrategy extends PassportStrategy(Strategy, "jwt") {
 		let user: {
 			id: number | undefined;
 			role: RolesEnum | undefined;
+			hemisId?: string;
 		} | null = null;
 
 		try {
@@ -63,9 +64,9 @@ export class JwtStrategy extends PassportStrategy(Strategy, "jwt") {
 						isDeleted: false,
 					},
 				});
-				user = { id: student?.id, role: payload.role };
+				user = { id: student?.id, role: payload.role, hemisId: student?.hemisId };
 			}
-console.log(user);
+
 
 			if (!user) {
 				throw new HttpException(errorPrompt.authorizationError, 401);
