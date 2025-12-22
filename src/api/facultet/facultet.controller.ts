@@ -36,7 +36,11 @@ export class FacultetController {
 	@Get()
 	@ApiOperation({ summary: "for admin" })
 	findAll() {
-		return this.facultetService.findAll();
+		return this.facultetService.findAll({
+			relations: {
+				building: true,
+			},
+		});
 	}
 
 	@Get("by-building/:id")
