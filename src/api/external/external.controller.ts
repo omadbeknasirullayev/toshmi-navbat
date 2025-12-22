@@ -29,4 +29,10 @@ export class ExternalController {
     return this.externalService.getFacultets();
   }
 
+  @Get('get-departments')
+  @Public()
+  getDepartments() {
+    return this.externalService.getFacultets();
+  }
+
 }

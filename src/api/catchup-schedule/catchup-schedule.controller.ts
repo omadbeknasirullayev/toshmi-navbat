@@ -62,7 +62,7 @@ export class CatchupScheduleController {
 	findAll() {
 		return this.catchupScheduleService.findAll({
 			where: { isDeleted: false },
-			relations: { building: true },
+			relations: { building: true, facultet: true },
 		});
 	}
 

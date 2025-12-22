@@ -43,10 +43,10 @@ export class ExternalService {
 	}
 
 	public async getFacultets() {
-			try {
+		try {
 			const response = await axios({
 				method: "get",
-				url: `https://e-journal.tashmeduni.uz/api/v1/base/speciality/list/`,
+				url: `https://e-journal.tashmeduni.uz/api/v1/base/department/list/for-navbat/`,
 				headers: {
 					"Content-Type": "application/json",
 					"X-API-TOKEN": "LP_API_9f3c7e1aB42D8KxQmR5YpZV0WnL6H",
@@ -54,6 +54,7 @@ export class ExternalService {
 			});
 			return response.data;
 		} catch (error) {
+			// console.log(error)
 			console.log(JSON.parse(JSON.stringify(error)));
 		}
 		return null;

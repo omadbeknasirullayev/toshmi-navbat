@@ -11,6 +11,8 @@ import { CatchupScheduleStudentStatus } from "src/common/database/Enums";
 import { appConfig } from "src/config/app.config";
 import * as QRCode from "qrcode";
 import { errorPrompt } from "src/infrastructure/lib/prompts/errorPrompt";
+import { Facultet } from "src/common/database/enity/facultet.entity";
+import { StudentLowPerformance } from "src/common/database/enity/student-low-performance.entity";
 
 @Injectable()
 export class CatchupScheduleService extends BaseService<
@@ -27,6 +29,12 @@ export class CatchupScheduleService extends BaseService<
 
 		@InjectRepository(Student)
 		private readonly studentRepo: Repository<Student>,
+
+		@InjectRepository(Facultet)
+		private readonly facultetRepo: Repository<Facultet>,
+
+		@InjectRepository(StudentLowPerformance)
+		private readonly studentLowPerformanceRepo: Repository<StudentLowPerformance>,
 	) {
 		super(repo, "Catchup Schedule");
 	}
@@ -90,6 +98,20 @@ export class CatchupScheduleService extends BaseService<
 	}
 
 	async create(dto: CreateCatchupScheduleDto) {
+		// Fakultetni tekshirish va u shu binoga tegishli ekanligini tasdiqlash
+		const faculty = await this.facultetRepo.findOne({
+			where: { id: dto.facultyId, isDeleted: false },
+			relations: { building: true },
+		});
+
+		if (!faculty) {
+			throw new HttpException(errorPrompt.facultyNotFound, 404);
+		}
+
+		if (faculty.buildingId !== dto.buildingId) {
+			throw new HttpException(errorPrompt.facultyNotBelongToBuilding, 400);
+		}
+
 		// Bir xil bino va sana uchun barcha jadvallarni olish
 		const existingSchedules = await this.repo.find({
 			where: {
@@ -172,6 +194,15 @@ export class CatchupScheduleService extends BaseService<
 			throw new HttpException(errorPrompt.studentNotFound, 404);
 		}
 
+		// Studentning 2mb yozuvlarini tekshirish
+		const has2mbRecords = await this.studentLowPerformanceRepo.exists({
+			where: { studentId },
+		});
+
+		if (!has2mbRecords) {
+			throw new HttpException(errorPrompt.studentHasNo2mbRecords, 400);
+		}
+
 		// Bugungi sanani olish (faqat sana, vaqtsiz)
 		const today = new Date();
 		today.setHours(0, 0, 0, 0);
@@ -181,10 +212,11 @@ export class CatchupScheduleService extends BaseService<
 				course: student.course,
 				date: MoreThanOrEqual(today),
 				buildingId: student.facultet.buildingId,
+				facultyId: student.facultetId,
 				isDeleted: false,
 				isActive: true,
 			},
-			relations: { building: true },
+			relations: { building: true, facultet: true },
 		});
 
 		// Hozirgi vaqtni olish
@@ -285,6 +317,15 @@ export class CatchupScheduleService extends BaseService<
 			throw new HttpException(errorPrompt.studentNotFound, 404);
 		}
 
+		// Studentning 2mb yozuvlarini tekshirish
+		const has2mbRecords = await this.studentLowPerformanceRepo.exists({
+			where: { studentId },
+		});
+
+		if (!has2mbRecords) {
+			throw new HttpException(errorPrompt.studentHasNo2mbRecords, 400);
+		}
+
 		const catchup = await this.findOneBy({
 			where: {
 				id: catchupScheduleId,
@@ -293,11 +334,16 @@ export class CatchupScheduleService extends BaseService<
 				isActive: true,
 				date: MoreThanOrEqual(new Date()),
 			},
-			relations: { building: true },
+			relations: { building: true, facultet: true },
 		});
 
 		if (!catchup || !catchup.building) {
 			throw new HttpException(errorPrompt.catchupScheduleNotFound, 404);
+		}
+
+		// Student fakulteti catchup schedule fakultetiga mos kelishini tekshirish
+		if (catchup.facultyId !== student.facultetId) {
+			throw new HttpException(errorPrompt.studentFacultyNotMatchSchedule, 400);
 		}
 
 		// Tanlangan vaqt slot mavjudligini tekshirish

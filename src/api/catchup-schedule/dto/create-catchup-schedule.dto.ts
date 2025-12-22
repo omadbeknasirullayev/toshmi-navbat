@@ -20,6 +20,11 @@ export class CreateCatchupScheduleDto {
   @Min(1)
   public buildingId!: number;
 
+  @ApiProperty()
+  @IsNotEmpty()
+  @Min(1)
+  public facultyId!: number;
+
   @ApiProperty({ example: "14:00", description: "Boshlanish vaqti (HH:mm formatda)" })
   @IsNotEmpty()
   @Matches(/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/, {

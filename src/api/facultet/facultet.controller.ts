@@ -39,6 +39,14 @@ export class FacultetController {
 		return this.facultetService.findAll();
 	}
 
+	@Get("by-building/:id")
+	@ApiOperation({ summary: "for admin" })
+	byBuilding(@Param("id", ParseIntPipe) id: number) {
+		return this.facultetService.findAll({
+			where: { buildingId: id, isActive: true, isDeleted: false },
+		});
+	}
+
 	@Get(":id")
 	@ApiOperation({ summary: "for admin" })
 	findOne(@Param("id", ParseIntPipe) id: number) {

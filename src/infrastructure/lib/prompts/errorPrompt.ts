@@ -2999,4 +2999,34 @@ export const errorPrompt = {
 			ru: "Студент с этим hemisId уже существует!",
 		},
 	},
+
+	// Faculty and Building Errors
+	facultyNotFound: {
+		status: "NOT_FOUND",
+		message: {
+			uz: "Fakultet topilmadi!",
+			ru: "Факультет не найден!",
+		},
+	},
+	facultyNotBelongToBuilding: {
+		status: "BAD_REQUEST",
+		message: {
+			uz: "Bu fakultet tanlangan binoga tegishli emas!",
+			ru: "Этот факультет не принадлежит выбранному зданию!",
+		},
+	},
+	studentFacultyNotMatchSchedule: {
+		status: "BAD_REQUEST",
+		message: {
+			uz: "Sizning fakultetingiz bu otrabotka uchun mos emas!",
+			ru: "Ваш факультет не соответствует этой отработке!",
+		},
+	},
+	studentHasNo2mbRecords: {
+		status: "BAD_REQUEST",
+		message: {
+			uz: "Sizda 2mb yozuvlari yo'q!",
+			ru: "У вас нет записей о низкой успеваемости (2мб)!",
+		},
+	},
 };
