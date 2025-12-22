@@ -1,11 +1,11 @@
 import { ApiProperty, ApiPropertyOptional } from "@nestjs/swagger";
-import { IsNotEmpty, IsOptional, IsString, IsEnum, Min } from "class-validator";
+import { IsNotEmpty, IsOptional, IsString, IsEnum, IsNumberString } from "class-validator";
 import { CatchupScheduleStudentStatus } from "src/common/database/Enums";
 
 export class GetCatchupStudentsDto {
 	@ApiProperty({ description: "Catchup Schedule ID" })
 	@IsNotEmpty()
-	@Min(1)
+	@IsNumberString()
 	public catchupScheduleId!: number;
 
 	@ApiPropertyOptional({
