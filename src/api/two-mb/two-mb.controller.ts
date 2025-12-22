@@ -48,11 +48,7 @@ export class TwoMbController {
 	@ApiOperation({ summary: "Get student's own 2MB records - for student" })
 	async getMyRecords(
 		@CurrentUser() user: AuthPayload,
-		// @Query("grouped") grouped?: string,
 	) {
-		// if (grouped === "true") {
-		// 	return this.twoMbService.findByStudentIdGroupedBySubject(user.id);
-		// }
 		return this.twoMbService.findByStudentId(user.id);
 	}
 

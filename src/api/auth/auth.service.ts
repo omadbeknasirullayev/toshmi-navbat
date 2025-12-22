@@ -11,7 +11,7 @@ import { LoginDto } from "./dto/login.dto";
 import { BcryptEncryption } from "src/infrastructure/lib/bcrypt";
 import { RefreshTokenDto } from "./dto/refresh-token.dto";
 import { Cron, CronExpression } from "@nestjs/schedule";
-import { Admin, Student, StudentLowPerformance } from "src/common/database/enity";
+import { Admin, Facultet, Student, StudentLowPerformance } from "src/common/database/enity";
 import { StudentLoginDto } from "./dto/student-login.dto";
 import { ExternalService } from "../external/external.service";
 
@@ -24,6 +24,8 @@ export class AuthService {
 		private readonly studentRepo: Repository<Student>,
 		@InjectRepository(StudentLowPerformance)
 		private readonly studentLowPerformanceRepo: Repository<StudentLowPerformance>,
+		@InjectRepository(Facultet)
+		private readonly facultetRepo: Repository<Facultet>,
 		private readonly externalService: ExternalService,
 		private readonly jwtToken: JwtToken,
 	) {}
@@ -61,6 +63,10 @@ export class AuthService {
 			}
 
 			const hashedPassword = await BcryptEncryption.encrypt(dto.password);
+			const faculctet = await this.facultetRepo.findOneBy({
+				hemisFacultyId: tmaStudent.user.department,
+			});
+
 			const newStudent = this.studentRepo.create({
 				hemisId: tmaStudent.user.student_id_number,
 				password: hashedPassword,
@@ -90,14 +96,17 @@ export class AuthService {
 				currentDistrict: tmaStudent.user.currentDistrict,
 				tmaUserId: tmaStudent.user.id,
 				course: 1,
-				facultetId: 1,
+				facultetId: faculctet?.id,
 			});
 
 			student = await this.studentRepo.save(newStudent);
 
 			await this.syncStudentLowPerformanceData(student.hemisId, student.id);
 
-			return { ...student, token: await this.jwtToken.generateToken(student, RolesEnum.STUDENT) };
+			return {
+				...student,
+				token: await this.jwtToken.generateToken(student, RolesEnum.STUDENT),
+			};
 		}
 
 		const isMatch = await BcryptEncryption.compare(dto.password, student.password);
@@ -113,7 +122,11 @@ export class AuthService {
 	private async syncStudentLowPerformanceData(hemisId: string, studentId: number): Promise<void> {
 		const lowPerformanceData = await this.externalService.get2MBStudent(hemisId);
 
-		if (!lowPerformanceData || !lowPerformanceData.data || lowPerformanceData.data.length === 0) {
+		if (
+			!lowPerformanceData ||
+			!lowPerformanceData.data ||
+			lowPerformanceData.data.length === 0
+		) {
 			return;
 		}
 

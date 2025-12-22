@@ -18,8 +18,8 @@ export class CatchupSchedule extends BaseEntity {
 	@Column({ type: "int", name: "buildingId" })
 	public buildingId!: number;
 
-	@Column({ type: "int", name: "facultyId", nullable: true })
-	public facultyId?: number;
+	@Column({ type: "int", name: "hemisFacultyId", nullable: true })
+	public hemisFacultyId?: number;
 
 	@Column({ type: "int", name: "registrationCount", default: 0 })
 	public registrationCount!: number;

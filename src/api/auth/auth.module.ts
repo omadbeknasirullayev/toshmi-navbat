@@ -5,11 +5,15 @@ import { JwtToken } from "src/infrastructure/lib/jwt-token";
 import { AuthController } from "./auth.controller";
 import { AuthService } from "./auth.service";
 import { JwtStrategy } from "./user/AuthStrategy";
-import { Admin, Student, StudentLowPerformance } from "src/common/database/enity";
+import { Admin, Student, StudentLowPerformance, Facultet } from "src/common/database/enity";
 import { ExternalModule } from "../external/external.module";
 
 @Module({
-	imports: [TypeOrmModule.forFeature([Admin, Student, StudentLowPerformance]), JwtModule, ExternalModule],
+	imports: [
+		TypeOrmModule.forFeature([Admin, Student, StudentLowPerformance, Facultet]),
+		JwtModule,
+		ExternalModule,
+	],
 	controllers: [AuthController],
 	providers: [AuthService, JwtToken, JwtStrategy],
 	exports: [AuthService],

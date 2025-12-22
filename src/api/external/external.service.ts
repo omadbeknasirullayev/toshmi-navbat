@@ -46,7 +46,7 @@ export class ExternalService {
 		try {
 			const response = await axios({
 				method: "get",
-				url: `https://e-journal.tashmeduni.uz/api/v1/base/department/list/for-navbat/`,
+				url: `https://e-journal.tashmeduni.uz/api/v1/base/department/list/for-navbat/?page=1&page_size=200`,
 				headers: {
 					"Content-Type": "application/json",
 					"X-API-TOKEN": "LP_API_9f3c7e1aB42D8KxQmR5YpZV0WnL6H",

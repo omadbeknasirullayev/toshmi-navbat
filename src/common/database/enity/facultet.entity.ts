@@ -9,8 +9,11 @@ export class Facultet extends BaseEntity {
   @Column({ type: "varchar", name: "name" })
   public name!: string;
 
-  @Column({ type: "int", name: "buildingId" })
-  public buildingId!: number;
+  @Column({ type: "int", name: "hemisFacultyId", nullable: true })
+  public hemisFacultyId?: number;
+
+  @Column({ type: "int", name: "buildingId", nullable: true })
+  public buildingId?: number;
 
   @ManyToOne(() => Building, (building) => building.facultets)
   public building!: Building;

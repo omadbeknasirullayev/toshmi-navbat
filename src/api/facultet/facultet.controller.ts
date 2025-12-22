@@ -33,6 +33,15 @@ export class FacultetController {
 		return this.facultetService.create(dto);
 	}
 
+	@Post("sync")
+	@ApiOperation({
+		summary: "for admin",
+		description: "External API'dan fakultetlarni sinxronlashtirish. Mavjud bo'lsa yangilaydi, yo'q bo'lsa yaratadi.",
+	})
+	syncFromExternal() {
+		return this.facultetService.syncFacultiesFromExternal();
+	}
+
 	@Get()
 	@ApiOperation({ summary: "for admin" })
 	findAll() {
