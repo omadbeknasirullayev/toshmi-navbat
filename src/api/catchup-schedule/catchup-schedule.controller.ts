@@ -22,6 +22,8 @@ import { RolesEnum } from "src/common/database/Enums";
 import { WriteQueueDto } from "./dto/write-queue.dto";
 import { Public } from "../auth/decorator";
 import { ScanQrDto } from "./dto/scan-qr.dto";
+import { HikvisionFaceEventDto } from "./dto/hikvision-face-event.dto";
+import { MarkArrivedDto } from "./dto/mark-arrived.dto";
 
 @Controller("catchup-schedule")
 @UseGuards(JwtAuthGuard, RolesGuard)
@@ -136,12 +138,22 @@ export class CatchupScheduleController {
 	@ApiOperation({
 		summary: "for admin",
 		description:
-			"Adminlar catchup schedule studentlar dagi id ni yuboradi. Student olgan navbat  keldiga o'zgatirish uchun",
+			"Admin tomonidan qo'lda studentni keldi statusiga o'tkazish. catchupScheduleStudentId (student navbat ID) ni yuborish kerak. Attendees count avtomatik oshiriladi.",
 	})
 	toArrivedStudent(
 		@Param("catchupScheduleStudentId", ParseIntPipe) catchupScheduleStudentId: number,
 	) {
 		return this.catchupScheduleService.toArrivedStudent(catchupScheduleStudentId);
+	}
+
+	@Post("mark-arrived")
+	@ApiOperation({
+		summary: "for admin",
+		description:
+			"Student hemisId va catchupSchedule ID orqali keldi qilish. Admin va studentlar uchun qulay - catchupScheduleStudentId bilish shart emas. Faqat student hemisId va jadval ID yetarli.",
+	})
+	markArrived(@Body() dto: MarkArrivedDto) {
+		return this.catchupScheduleService.markStudentArrived(dto);
 	}
 
 	@Post("scan-qr")
@@ -152,6 +164,17 @@ export class CatchupScheduleController {
 	})
 	scanQrCode(@Body() body: ScanQrDto) {
 		return this.catchupScheduleService.scanQrCode(body.qrData);
+	}
+
+	@Post("hikvision-face-event")
+	@Public()
+	@ApiOperation({
+		summary: "for Hikvision device",
+		description:
+			"Hikvision face ID devicedan kelgan eventni qabul qilish. Student avtomatik keldi statusiga o'tkaziladi.",
+	})
+	handleHikvisionEvent(@Body() body: HikvisionFaceEventDto) {
+		return this.catchupScheduleService.handleHikvisionFaceEvent(body);
 	}
 
 	@Patch(":id")

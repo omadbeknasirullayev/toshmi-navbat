@@ -4,7 +4,7 @@ import { UpdateCatchupScheduleDto } from "./dto/update-catchup-schedule.dto";
 import { BaseService } from "src/infrastructure/lib/baseService";
 import { CatchupSchedule } from "src/common/database/enity/catchup-schedule.entity";
 import { InjectRepository } from "@nestjs/typeorm";
-import { In, MoreThanOrEqual, Not, Repository } from "typeorm";
+import { In, MoreThanOrEqual, Not, Repository, LessThanOrEqual } from "typeorm";
 import { Student } from "src/common/database/enity";
 import { CatchupScheduleStudent } from "src/common/database/enity/catchup-schedule-student.entity";
 import { CatchupScheduleStudentStatus } from "src/common/database/Enums";
@@ -13,6 +13,7 @@ import * as QRCode from "qrcode";
 import { errorPrompt } from "src/infrastructure/lib/prompts/errorPrompt";
 import { Facultet } from "src/common/database/enity/facultet.entity";
 import { StudentLowPerformance } from "src/common/database/enity/student-low-performance.entity";
+import { HikvisionFaceEventDto } from "./dto/hikvision-face-event.dto";
 
 @Injectable()
 export class CatchupScheduleService extends BaseService<
@@ -101,13 +102,13 @@ export class CatchupScheduleService extends BaseService<
 		let hemisFacultiesToCreate: number[] = [];
 
 		// Agar hemisFacultyIds berilgan bo'lsa, ularni tekshirish
-		if (dto.hemisFacultyIds && dto.hemisFacultyIds.length > 0) {
+		if (dto.facultetIds && dto.facultetIds.length > 0) {
 			const faculties = await this.facultetRepo.find({
-				where: { journalFacultyId: In(dto.hemisFacultyIds), isDeleted: false },
+				where: { id: In(dto.facultetIds), isDeleted: false },
 				relations: { building: true },
 			});
 
-			if (faculties.length !== dto.hemisFacultyIds.length) {
+			if (faculties.length !== dto.facultetIds.length) {
 				throw new HttpException(errorPrompt.facultyNotFound, 404);
 			}
 
@@ -117,7 +118,7 @@ export class CatchupScheduleService extends BaseService<
 				throw new HttpException(errorPrompt.facultyNotBelongToBuilding, 400);
 			}
 
-			hemisFacultiesToCreate = dto.hemisFacultyIds;
+			hemisFacultiesToCreate = dto.facultetIds;
 		} else {
 			// Agar hemisFacultyIds berilmagan bo'lsa, binoning barcha fakultetlarini olish
 			const allFaculties = await this.facultetRepo.find({
@@ -197,10 +198,10 @@ export class CatchupScheduleService extends BaseService<
 		// Har bir fakultet uchun jadval yaratish
 		const createdSchedules: CatchupSchedule[] = [];
 
-		for (const hemisFacultyId of hemisFacultiesToCreate) {
+		for (const facultetId of hemisFacultiesToCreate) {
 			const catchupSchedule = this.repo.create({
 				...dto,
-				hemisFacultyId,
+				facultetId,
 				timeSlots,
 			});
 
@@ -222,7 +223,7 @@ export class CatchupScheduleService extends BaseService<
 			schedules: createdSchedules.map(s => ({
 				id: s.id,
 				name: s.name,
-				hemisFacultyId: s.hemisFacultyId,
+				facultetId: s.facultetId,
 				buildingId: s.buildingId,
 				course: s.course,
 				date: s.date,
@@ -270,7 +271,6 @@ export class CatchupScheduleService extends BaseService<
 		});
 
 		console.log("Student faculty:", student?.facultet);
-		
 
 		if (!student) {
 			throw new HttpException(errorPrompt.studentNotFound, 404);
@@ -300,9 +300,12 @@ export class CatchupScheduleService extends BaseService<
 			.andWhere("schedule.buildingId = :buildingId", {
 				buildingId: student.facultet.buildingId,
 			})
-			.andWhere("(schedule.journalFacultyId = :journalFacultyId OR schedule.journalFacultyId IS NULL)", {
-				journalFacultyId: student.facultet.journalFacultyId,
-			})
+			.andWhere(
+				"(schedule.facultetId = :facultetId OR schedule.facultetId IS NULL)",
+				{
+					facultetId: student.facultet.id,
+				},
+			)
 			.andWhere("schedule.isDeleted = :isDeleted", { isDeleted: false })
 			.andWhere("schedule.isActive = :isActive", { isActive: true })
 			.leftJoinAndSelect("schedule.building", "building")
@@ -433,7 +436,7 @@ export class CatchupScheduleService extends BaseService<
 
 		// Student fakulteti catchup schedule fakultetiga mos kelishini tekshirish
 		// hemisFacultyId null bo'lsa, barcha fakultetlar uchun, aks holda student department mos kelishi kerak
-		if (catchup.hemisFacultyId !== null && catchup.hemisFacultyId !== student.department) {
+		if (catchup.facultetId !== null && catchup.facultetId !== student.department) {
 			throw new HttpException(errorPrompt.studentFacultyNotMatchSchedule, 400);
 		}
 
@@ -550,16 +553,144 @@ export class CatchupScheduleService extends BaseService<
 	async toArrivedStudent(catchupScheduleStudentId: number) {
 		const catchupScheduleStudent = await this.catchupScheduleStudentRepo.findOne({
 			where: { id: catchupScheduleStudentId },
+			relations: { student: { facultet: true }, catchupSchedule: true },
 		});
 
 		if (!catchupScheduleStudent) {
 			throw new HttpException(errorPrompt.catchupScheduleStudentNotFound, 404);
 		}
 
+		// Agar allaqachon kelgan bo'lsa
+		if (catchupScheduleStudent.status === CatchupScheduleStudentStatus.ARRIVED) {
+			throw new HttpException(
+				{
+					status: "BAD_REQUEST",
+					message: {
+						uz: "Student allaqachon keldi statusida!",
+						ru: "Студент уже находится в статусе прибыл!",
+					},
+				},
+				400,
+			);
+		}
+
+		// Statusni o'zgartirish
 		catchupScheduleStudent.status = CatchupScheduleStudentStatus.ARRIVED;
 		await this.catchupScheduleStudentRepo.save(catchupScheduleStudent);
 
-		return catchupScheduleStudent;
+		// Catchup schedule'dagi attendeesCount ni oshirish
+		const catchup = await this.repo.findOne({
+			where: { id: catchupScheduleStudent.catchupScheduleId },
+		});
+
+		if (catchup) {
+			catchup.attendeesCount += 1;
+			await this.repo.save(catchup);
+		}
+
+		return {
+			success: true,
+			message: "Student muvaffaqiyatli keldi statusiga o'tkazildi",
+			student: {
+				id: catchupScheduleStudent.student.id,
+				hemisId: catchupScheduleStudent.student.hemisId,
+				name: catchupScheduleStudent.student.fullname,
+				facultet: catchupScheduleStudent.student.facultet?.name,
+			},
+			schedule: {
+				id: catchupScheduleStudent.catchupScheduleId,
+				name: catchupScheduleStudent.catchupSchedule.name,
+				date: catchupScheduleStudent.catchupSchedule.date,
+				selectedTimeSlot: catchupScheduleStudent.selectedTimeSlot,
+				queueNumber: catchupScheduleStudent.queueNumber,
+			},
+			markedAt: new Date().toISOString(),
+		};
+	}
+
+	/**
+	 * Student hemisId va catchupScheduleId orqali keldi qilish
+	 * Admin va studentlar uchun oson identifikatorlar
+	 */
+	async markStudentArrived(dto: { hemisId: string; catchupScheduleId: number }) {
+		// Student topish
+		const student = await this.studentRepo.findOne({
+			where: { hemisId: dto.hemisId },
+			relations: { facultet: true },
+		});
+
+		if (!student) {
+			throw new HttpException(errorPrompt.studentNotFound, 404);
+		}
+
+		// CatchupScheduleStudent yozuvini topish
+		const catchupScheduleStudent = await this.catchupScheduleStudentRepo.findOne({
+			where: {
+				studentId: student.id,
+				catchupScheduleId: dto.catchupScheduleId,
+			},
+			relations: { catchupSchedule: true },
+		});
+
+		if (!catchupScheduleStudent) {
+			throw new HttpException(
+				{
+					status: "NOT_FOUND",
+					message: {
+						uz: "Student ushbu jadvalga yozilmagan!",
+						ru: "Студент не записан на это расписание!",
+					},
+				},
+				404,
+			);
+		}
+
+		// Agar allaqachon kelgan bo'lsa
+		if (catchupScheduleStudent.status === CatchupScheduleStudentStatus.ARRIVED) {
+			throw new HttpException(
+				{
+					status: "BAD_REQUEST",
+					message: {
+						uz: "Student allaqachon keldi statusida!",
+						ru: "Студент уже находится в статусе прибыл!",
+					},
+				},
+				400,
+			);
+		}
+
+		// Statusni o'zgartirish
+		catchupScheduleStudent.status = CatchupScheduleStudentStatus.ARRIVED;
+		await this.catchupScheduleStudentRepo.save(catchupScheduleStudent);
+
+		// Catchup schedule'dagi attendeesCount ni oshirish
+		const catchup = await this.repo.findOne({
+			where: { id: dto.catchupScheduleId },
+		});
+
+		if (catchup) {
+			catchup.attendeesCount += 1;
+			await this.repo.save(catchup);
+		}
+
+		return {
+			success: true,
+			message: "Student muvaffaqiyatli keldi statusiga o'tkazildi",
+			student: {
+				id: student.id,
+				hemisId: student.hemisId,
+				name: student.fullname,
+				facultet: student.facultet?.name,
+			},
+			schedule: {
+				id: catchupScheduleStudent.catchupScheduleId,
+				name: catchupScheduleStudent.catchupSchedule.name,
+				date: catchupScheduleStudent.catchupSchedule.date,
+				selectedTimeSlot: catchupScheduleStudent.selectedTimeSlot,
+				queueNumber: catchupScheduleStudent.queueNumber,
+			},
+			markedAt: new Date().toISOString(),
+		};
 	}
 
 	/**
@@ -683,6 +814,150 @@ export class CatchupScheduleService extends BaseService<
 			originalTimeSlot: oldSlot,
 			actualArrivalSlot: currentSlot,
 			note: `Student was scheduled for ${oldSlot} but arrived during ${currentSlot}. Time slot was automatically adjusted.`,
+		};
+	}
+
+	async handleHikvisionFaceEvent(dto: HikvisionFaceEventDto) {
+		// employeeNoString dan hemisId olish
+		const hemisId = dto.AccessControllerEvent?.employeeNoString;
+
+		if (!hemisId) {
+			throw new HttpException(
+				{
+					status: "BAD_REQUEST",
+					message: {
+						uz: "HEMIS ID topilmadi!",
+						ru: "HEMIS ID не найден!",
+					},
+				},
+				400,
+			);
+		}
+
+		// Studentni topish
+		const student = await this.studentRepo.findOne({
+			where: { hemisId },
+			relations: { facultet: true },
+		});
+
+		if (!student) {
+			throw new HttpException(
+				{
+					status: "NOT_FOUND",
+					message: {
+						uz: "Student topilmadi!",
+						ru: "Студент не найден!",
+					},
+				},
+				404,
+			);
+		}
+
+		// Hozirgi vaqt
+		const now = new Date();
+		const currentTime = `${now.getHours().toString().padStart(2, "0")}:${now.getMinutes().toString().padStart(2, "0")}`;
+		const currentMinutes = this.parseTimeToMinutes(currentTime);
+
+		// Bugungi sana (vaqtsiz)
+		const today = new Date();
+		today.setHours(0, 0, 0, 0);
+
+		const tomorrow = new Date(today);
+		tomorrow.setDate(tomorrow.getDate() + 1);
+
+		// Bugungi kun uchun studentning pending statusidagi navbatlarini topish
+		const studentSchedules = await this.catchupScheduleStudentRepo.find({
+			where: {
+				studentId: student.id,
+				status: CatchupScheduleStudentStatus.PENDING,
+			},
+			relations: { catchupSchedule: true },
+			order: { selectedTimeSlot: "ASC" },
+		});
+
+		// Bugungi kun uchun filtr qilish
+		const todaySchedules = studentSchedules.filter((ss) => {
+			const scheduleDate = new Date(ss.catchupSchedule.date);
+			scheduleDate.setHours(0, 0, 0, 0);
+			return scheduleDate.getTime() === today.getTime();
+		});
+
+		if (todaySchedules.length === 0) {
+			throw new HttpException(
+				{
+					status: "NOT_FOUND",
+					message: {
+						uz: "Bugun uchun hech qanday navbat topilmadi!",
+						ru: "Не найдено очереди на сегодня!",
+					},
+				},
+				404,
+			);
+		}
+
+		// Mos keladigan jadval topish:
+		// 1. Vaqt oralig'ida (startTime - 2 soat) dan endTime gacha
+		// 2. Eng yaqin jadval
+		let targetSchedule: (typeof todaySchedules)[0] | null = null;
+
+		for (const ss of todaySchedules) {
+			const catchup = ss.catchupSchedule;
+			const startMinutes = this.parseTimeToMinutes(catchup.startTime);
+			const endMinutes = this.parseTimeToMinutes(catchup.endTime);
+
+			// 2 soat oldin = startTime - 120 minutes
+			const twoHoursBeforeStart = startMinutes - 120;
+
+			// Agar hozirgi vaqt (2 soat oldin) dan endTime gacha bo'lsa
+			if (currentMinutes >= twoHoursBeforeStart && currentMinutes <= endMinutes) {
+				targetSchedule = ss;
+				break;
+			}
+		}
+
+		if (!targetSchedule) {
+			throw new HttpException(
+				{
+					status: "BAD_REQUEST",
+					message: {
+						uz: "Hozirgi vaqtda kelish mumkin bo'lgan otrabotka topilmadi! 2 soat oldin yoki vaqt tugaganidan keyin kelish mumkin emas.",
+						ru: "Не найдена отработка для текущего времени! Нельзя прийти за 2 часа до начала или после окончания.",
+					},
+				},
+				400,
+			);
+		}
+
+		// Student statusini "arrived" ga o'zgartirish
+		targetSchedule.status = CatchupScheduleStudentStatus.ARRIVED;
+		await this.catchupScheduleStudentRepo.save(targetSchedule);
+
+		// Catchup schedule'dagi attendeesCount ni oshirish
+		const catchup = await this.repo.findOne({
+			where: { id: targetSchedule.catchupScheduleId },
+		});
+
+		if (catchup) {
+			catchup.attendeesCount += 1;
+			await this.repo.save(catchup);
+		}
+
+		return {
+			success: true,
+			message: "Student muvaffaqiyatli keldi statusiga o'tkazildi",
+			student: {
+				hemisId: student.hemisId,
+				name: student.fullname,
+				facultet: student.facultet?.name,
+			},
+			schedule: {
+				id: targetSchedule.catchupScheduleId,
+				name: targetSchedule.catchupSchedule.name,
+				date: targetSchedule.catchupSchedule.date,
+				selectedTimeSlot: targetSchedule.selectedTimeSlot,
+				queueNumber: targetSchedule.queueNumber,
+			},
+			arrivedAt: new Date().toISOString(),
 		};
 	}
 }

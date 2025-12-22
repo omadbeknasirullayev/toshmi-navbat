@@ -23,12 +23,12 @@ export class CreateCatchupScheduleDto {
   @ApiProperty({
     required: false,
     type: [Number],
-    description: "HEMIS Fakultet ID lari (departmentId). Agar berilmasa, binoning barcha fakultetlari uchun yaratiladi"
+    description: "Fakultet ID lari. Agar berilmasa, binoning barcha fakultetlari uchun yaratiladi"
   })
   @IsOptional()
   @IsArray()
   @ArrayMinSize(1)
-  public hemisFacultyIds?: number[];
+  public facultetIds?: number[];
 
   @ApiProperty({ example: "14:00", description: "Boshlanish vaqti (HH:mm formatda)" })
   @IsNotEmpty()
