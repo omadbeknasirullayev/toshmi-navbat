@@ -98,18 +98,46 @@ export class CatchupScheduleService extends BaseService<
 	}
 
 	async create(dto: CreateCatchupScheduleDto) {
-		// Fakultetni tekshirish va u shu binoga tegishli ekanligini tasdiqlash
-		const faculty = await this.facultetRepo.findOne({
-			where: { id: dto.facultyId, isDeleted: false },
-			relations: { building: true },
-		});
+		let facultiesToCreate: number[] = [];
 
-		if (!faculty) {
-			throw new HttpException(errorPrompt.facultyNotFound, 404);
-		}
+		// Agar facultyIds berilgan bo'lsa, ularni tekshirish
+		if (dto.facultyIds && dto.facultyIds.length > 0) {
+			const faculties = await this.facultetRepo.find({
+				where: { id: In(dto.facultyIds), buildingId: dto.buildingId, isDeleted: false },
+				relations: { building: true },
+			});
 
-		if (faculty.buildingId !== dto.buildingId) {
-			throw new HttpException(errorPrompt.facultyNotBelongToBuilding, 400);
+			if (faculties.length !== dto.facultyIds.length) {
+				throw new HttpException(errorPrompt.facultyNotFound, 404);
+			}
+
+			// Barcha fakultetlar shu binoga tegishli ekanligini tekshirish
+			const invalidFaculties = faculties.filter((f) => f.buildingId !== dto.buildingId);
+			if (invalidFaculties.length > 0) {
+				throw new HttpException(errorPrompt.facultyNotBelongToBuilding, 400);
+			}
+
+			facultiesToCreate = dto.facultyIds;
+		} else {
+			// Agar fakultyIds berilmagan bo'lsa, binoning barcha fakultetlarini olish
+			const allFaculties = await this.facultetRepo.find({
+				where: { buildingId: dto.buildingId, isDeleted: false },
+			});
+
+			if (allFaculties.length === 0) {
+				throw new HttpException(
+					{
+						status: "BAD_REQUEST",
+						message: {
+							uz: "Bu binoda hech qanday fakultet topilmadi!",
+							ru: "В этом здании не найдено ни одного факультета!",
+						},
+					},
+					400,
+				);
+			}
+
+			facultiesToCreate = allFaculties.map((f) => f.id);
 		}
 
 		// Bir xil bino va sana uchun barcha jadvallarni olish
@@ -149,13 +177,47 @@ export class CatchupScheduleService extends BaseService<
 			throw new HttpException(errorPrompt.noTimeSlotsGenerated, 400);
 		}
 
-		// Jadval yaratish
-		const catchupSchedule = this.repo.create({
-			...dto,
-			timeSlots,
-		});
+		// Har bir fakultet uchun jadval yaratish
+		const createdSchedules: CatchupSchedule[] = [];
 
-		return await this.repo.save(catchupSchedule);
+		for (const facultyId of facultiesToCreate) {
+			const catchupSchedule = this.repo.create({
+				...dto,
+				facultyId,
+				timeSlots,
+			});
+
+			const saved = await this.repo.save(catchupSchedule);
+			createdSchedules.push(saved);
+		}
+
+		// Agar bitta otrabotka yaratilgan bo'lsa, to'g'ridan-to'g'ri qaytarish
+		if (createdSchedules.length === 1) {
+			return createdSchedules[0];
+		}
+
+		// Agar ko'p otrabotka yaratilgan bo'lsa, summary response qaytarish
+		// Circular reference muammosini oldini olish uchun
+		const response = {
+			success: true,
+			message: `${createdSchedules.length} ta fakultet uchun otrabotka muvaffaqiyatli yaratildi`,
+			totalCreated: createdSchedules.length,
+			schedules: createdSchedules.map(s => ({
+				id: s.id,
+				name: s.name,
+				facultyId: s.facultyId,
+				buildingId: s.buildingId,
+				course: s.course,
+				date: s.date,
+				startTime: s.startTime,
+				endTime: s.endTime,
+				timeSlots: s.timeSlots,
+			})),
+		};
+
+		// BaseService compatibility uchun birinchi schedule'ni qaytarish kerak
+		// lekin biz response obyektini qaytaramiz
+		return response as any;
 	}
 
 	/**
@@ -207,17 +269,25 @@ export class CatchupScheduleService extends BaseService<
 		const today = new Date();
 		today.setHours(0, 0, 0, 0);
 
-		const schedules = await this.repo.find({
-			where: {
-				course: student.course,
-				date: MoreThanOrEqual(today),
+		// Studentga tegishli otrabotkalarni topish:
+		// 1. Student kursi mos kelishi kerak
+		// 2. Student fakulteti buildingida bo'lishi kerak
+		// 3. facultyId student fakultetiga teng YOKI null bo'lishi kerak (barcha fakultetlar uchun)
+		const schedules = await this.repo
+			.createQueryBuilder("schedule")
+			.where("schedule.course = :course", { course: student.course })
+			.andWhere("schedule.date >= :today", { today })
+			.andWhere("schedule.buildingId = :buildingId", {
 				buildingId: student.facultet.buildingId,
+			})
+			.andWhere("(schedule.facultyId = :facultyId OR schedule.facultyId IS NULL)", {
 				facultyId: student.facultetId,
-				isDeleted: false,
-				isActive: true,
-			},
-			relations: { building: true, facultet: true },
-		});
+			})
+			.andWhere("schedule.isDeleted = :isDeleted", { isDeleted: false })
+			.andWhere("schedule.isActive = :isActive", { isActive: true })
+			.leftJoinAndSelect("schedule.building", "building")
+			.leftJoinAndSelect("schedule.facultet", "facultet")
+			.getMany();
 
 		// Hozirgi vaqtni olish
 		const now = new Date();
@@ -342,7 +412,8 @@ export class CatchupScheduleService extends BaseService<
 		}
 
 		// Student fakulteti catchup schedule fakultetiga mos kelishini tekshirish
-		if (catchup.facultyId !== student.facultetId) {
+		// facultyId null bo'lsa, barcha fakultetlar uchun, aks holda student fakulteti mos kelishi kerak
+		if (catchup.facultyId !== null && catchup.facultyId !== student.facultetId) {
 			throw new HttpException(errorPrompt.studentFacultyNotMatchSchedule, 400);
 		}
 

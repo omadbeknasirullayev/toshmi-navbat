@@ -1,5 +1,5 @@
 import { ApiProperty } from "@nestjs/swagger";
-import { IsNotEmpty, Min, Matches } from "class-validator";
+import { IsNotEmpty, Min, Matches, IsOptional, IsArray, ArrayMinSize } from "class-validator";
 
 export class CreateCatchupScheduleDto {
   @ApiProperty()
@@ -20,10 +20,15 @@ export class CreateCatchupScheduleDto {
   @Min(1)
   public buildingId!: number;
 
-  @ApiProperty()
-  @IsNotEmpty()
-  @Min(1)
-  public facultyId!: number;
+  @ApiProperty({
+    required: false,
+    type: [Number],
+    description: "Fakultetlar ID lari. Agar berilmasa, binoning barcha fakultetlari uchun yaratiladi"
+  })
+  @IsOptional()
+  @IsArray()
+  @ArrayMinSize(1)
+  public facultyIds?: number[];
 
   @ApiProperty({ example: "14:00", description: "Boshlanish vaqti (HH:mm formatda)" })
   @IsNotEmpty()
