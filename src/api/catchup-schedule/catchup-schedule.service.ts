@@ -14,6 +14,7 @@ import { errorPrompt } from "src/infrastructure/lib/prompts/errorPrompt";
 import { Facultet } from "src/common/database/enity/facultet.entity";
 import { StudentLowPerformance } from "src/common/database/enity/student-low-performance.entity";
 import { HikvisionFaceEventDto } from "./dto/hikvision-face-event.dto";
+import { CatchupScheduleFacultet } from "src/common/database/enity/catchup-schedule-facultet.entity";
 
 @Injectable()
 export class CatchupScheduleService extends BaseService<
@@ -36,6 +37,9 @@ export class CatchupScheduleService extends BaseService<
 
 		@InjectRepository(StudentLowPerformance)
 		private readonly studentLowPerformanceRepo: Repository<StudentLowPerformance>,
+
+		@InjectRepository(CatchupScheduleFacultet)
+		private readonly catchupScheduleFacultetRepo: Repository<CatchupScheduleFacultet>,
 	) {
 		super(repo, "Catchup Schedule");
 	}
@@ -99,9 +103,9 @@ export class CatchupScheduleService extends BaseService<
 	}
 
 	async create(dto: CreateCatchupScheduleDto) {
-		let hemisFacultiesToCreate: number[] = [];
+		let facultetIdsToLink: number[] = [];
 
-		// Agar hemisFacultyIds berilgan bo'lsa, ularni tekshirish
+		// Agar facultetIds berilgan bo'lsa, ularni tekshirish
 		if (dto.facultetIds && dto.facultetIds.length > 0) {
 			const faculties = await this.facultetRepo.find({
 				where: { id: In(dto.facultetIds), isDeleted: false },
@@ -118,9 +122,9 @@ export class CatchupScheduleService extends BaseService<
 				throw new HttpException(errorPrompt.facultyNotBelongToBuilding, 400);
 			}
 
-			hemisFacultiesToCreate = dto.facultetIds;
+			facultetIdsToLink = dto.facultetIds;
 		} else {
-			// Agar hemisFacultyIds berilmagan bo'lsa, binoning barcha fakultetlarini olish
+			// Agar facultetIds berilmagan bo'lsa, binoning barcha fakultetlarini olish
 			const allFaculties = await this.facultetRepo.find({
 				where: { buildingId: dto.buildingId, isDeleted: false },
 			});
@@ -138,24 +142,7 @@ export class CatchupScheduleService extends BaseService<
 				);
 			}
 
-			// Faqat hemisFacultyId bo'lgan fakultetlarni olish
-			hemisFacultiesToCreate = allFaculties
-				.filter((f) => f.journalFacultyId !== null && f.journalFacultyId !== undefined)
-				.map((f) => f.journalFacultyId!);
-
-			// Agar hech qanday fakultetda hemisFacultyId bo'lmasa
-			if (hemisFacultiesToCreate.length === 0) {
-				throw new HttpException(
-					{
-						status: "BAD_REQUEST",
-						message: {
-							uz: "Bu binodagi fakultetlar uchun HEMIS ID'lari belgilanmagan!",
-							ru: "HEMIS ID не установлены для факультетов этого здания!",
-						},
-					},
-					400,
-				);
-			}
+			facultetIdsToLink = allFaculties.map((f) => f.id);
 		}
 
 		// Bir xil bino va sana uchun barcha jadvallarni olish
@@ -195,47 +182,36 @@ export class CatchupScheduleService extends BaseService<
 			throw new HttpException(errorPrompt.noTimeSlotsGenerated, 400);
 		}
 
-		// Har bir fakultet uchun jadval yaratish
-		const createdSchedules: CatchupSchedule[] = [];
+		// Bitta jadval yaratish
+		const catchupSchedule = this.repo.create({
+			name: dto.name,
+			date: dto.date,
+			course: dto.course,
+			buildingId: dto.buildingId,
+			startTime: dto.startTime,
+			endTime: dto.endTime,
+			timeSlots,
+		});
 
-		for (const facultetId of hemisFacultiesToCreate) {
-			const catchupSchedule = this.repo.create({
-				...dto,
+		const savedSchedule = await this.repo.save(catchupSchedule);
+
+		// Fakultetlar bilan bog'lash (many-to-many)
+		const facultetRelations: CatchupScheduleFacultet[] = [];
+		for (const facultetId of facultetIdsToLink) {
+			const relation = this.catchupScheduleFacultetRepo.create({
+				catchupScheduleId: savedSchedule.id,
 				facultetId,
-				timeSlots,
 			});
-
-			const saved = await this.repo.save(catchupSchedule);
-			createdSchedules.push(saved);
+			const savedRelation = await this.catchupScheduleFacultetRepo.save(relation);
+			facultetRelations.push(savedRelation);
 		}
 
-		// Agar bitta otrabotka yaratilgan bo'lsa, to'g'ridan-to'g'ri qaytarish
-		if (createdSchedules.length === 1) {
-			return createdSchedules[0];
-		}
-
-		// Agar ko'p otrabotka yaratilgan bo'lsa, summary response qaytarish
-		// Circular reference muammosini oldini olish uchun
-		const response = {
-			success: true,
-			message: `${createdSchedules.length} ta fakultet uchun otrabotka muvaffaqiyatli yaratildi`,
-			totalCreated: createdSchedules.length,
-			schedules: createdSchedules.map(s => ({
-				id: s.id,
-				name: s.name,
-				facultetId: s.facultetId,
-				buildingId: s.buildingId,
-				course: s.course,
-				date: s.date,
-				startTime: s.startTime,
-				endTime: s.endTime,
-				timeSlots: s.timeSlots,
-			})),
+		// Response ni fakultetlar bilan qaytarish
+		return {
+			...savedSchedule,
+			facultetCount: facultetRelations.length,
+			facultetIds: facultetIdsToLink,
 		};
-
-		// BaseService compatibility uchun birinchi schedule'ni qaytarish kerak
-		// lekin biz response obyektini qaytaramiz
-		return response as any;
 	}
 
 	/**
@@ -300,16 +276,17 @@ export class CatchupScheduleService extends BaseService<
 			.andWhere("schedule.buildingId = :buildingId", {
 				buildingId: student.facultet.buildingId,
 			})
-			.andWhere(
-				"(schedule.facultetId = :facultetId OR schedule.facultetId IS NULL)",
-				{
-					facultetId: student.facultet.id,
-				},
+			.innerJoin(
+				"schedule.facultets",
+				"csf",
+				"csf.facultetId = :facultetId",
+				{ facultetId: student.facultet.id }
 			)
 			.andWhere("schedule.isDeleted = :isDeleted", { isDeleted: false })
 			.andWhere("schedule.isActive = :isActive", { isActive: true })
 			.leftJoinAndSelect("schedule.building", "building")
-			.leftJoinAndSelect("schedule.facultet", "facultet")
+			.leftJoinAndSelect("schedule.facultets", "facultetRelations")
+			.leftJoinAndSelect("facultetRelations.facultet", "facultet")
 			.getMany();
 
 		// Hozirgi vaqtni olish
@@ -427,16 +404,16 @@ export class CatchupScheduleService extends BaseService<
 				isActive: true,
 				date: MoreThanOrEqual(new Date()),
 			},
-			relations: { building: true, facultet: true },
+			relations: { building: true, facultets: { facultet: true } },
 		});
 
 		if (!catchup || !catchup.building) {
 			throw new HttpException(errorPrompt.catchupScheduleNotFound, 404);
 		}
 
-		// Student fakulteti catchup schedule fakultetiga mos kelishini tekshirish
-		// hemisFacultyId null bo'lsa, barcha fakultetlar uchun, aks holda student department mos kelishi kerak
-		if (catchup.facultetId !== null && catchup.facultetId !== student.department) {
+		// Student fakulteti catchup schedule'ning fakultetlari ichida borligini tekshirish
+		const facultetIds = catchup.facultets?.map(csf => csf.facultetId) || [];
+		if (!facultetIds.includes(student.facultet.id)) {
 			throw new HttpException(errorPrompt.studentFacultyNotMatchSchedule, 400);
 		}
 

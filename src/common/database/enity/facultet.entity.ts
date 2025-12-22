@@ -2,7 +2,7 @@ import { Column, Entity, ManyToOne, OneToMany } from "typeorm";
 import { BaseEntity } from "../BaseEntity";
 import { Building } from "./building.entity";
 import { Student } from "./student.entity";
-import { CatchupSchedule } from "./catchup-schedule.entity";
+import { CatchupScheduleFacultet } from "./catchup-schedule-facultet.entity";
 
 @Entity('facultets')
 export class Facultet extends BaseEntity {
@@ -21,6 +21,6 @@ export class Facultet extends BaseEntity {
   @OneToMany(() => Student, (student) => student.facultet)
   public students!: Student[];
 
-  @OneToMany(() => CatchupSchedule, (schedule) => schedule.facultet)
-  public catchupSchedules!: CatchupSchedule[];
+  @OneToMany(() => CatchupScheduleFacultet, (csf) => csf.facultet)
+  public catchupSchedules!: CatchupScheduleFacultet[];
 }

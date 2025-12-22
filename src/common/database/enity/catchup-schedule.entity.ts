@@ -2,7 +2,7 @@ import { Column, Entity, ManyToOne, OneToMany } from "typeorm";
 import { BaseEntity } from "../BaseEntity";
 import { Building } from "./building.entity";
 import { CatchupScheduleStudent } from "./catchup-schedule-student.entity";
-import { Facultet } from "./facultet.entity";
+import { CatchupScheduleFacultet } from "./catchup-schedule-facultet.entity";
 
 @Entity("catchup_schedules")
 export class CatchupSchedule extends BaseEntity {
@@ -17,9 +17,6 @@ export class CatchupSchedule extends BaseEntity {
 
 	@Column({ type: "int", name: "buildingId" })
 	public buildingId!: number;
-
-	@Column({ type: "int", name: "facultetId", nullable: true })
-	public facultetId?: number;
 
 	@Column({ type: "int", name: "registrationCount", default: 0 })
 	public registrationCount!: number;
@@ -39,8 +36,8 @@ export class CatchupSchedule extends BaseEntity {
 	@ManyToOne(() => Building, (building) => building.catchupSchedules)
 	public building?: Building;
 
-	@ManyToOne(() => Facultet, (facultet) => facultet.catchupSchedules)
-	public facultet?: Facultet;
+	@OneToMany(() => CatchupScheduleFacultet, (csf) => csf.catchupSchedule)
+	public facultets?: CatchupScheduleFacultet[];
 
 	@OneToMany(() => CatchupScheduleStudent, (css) => css.catchupSchedule)
 	public students?: CatchupScheduleStudent[];
