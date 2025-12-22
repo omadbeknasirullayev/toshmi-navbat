@@ -300,13 +300,13 @@ export class CatchupScheduleService extends BaseService<
 			.andWhere("schedule.buildingId = :buildingId", {
 				buildingId: student.facultet.buildingId,
 			})
-			.andWhere("(schedule.hemisFacultyId = :hemisFacultyId OR schedule.hemisFacultyId IS NULL)", {
-				hemisFacultyId: student.department,
+			.andWhere("(schedule.journalFacultyId = :journalFacultyId OR schedule.journalFacultyId IS NULL)", {
+				journalFacultyId: student.facultet.journalFacultyId,
 			})
 			.andWhere("schedule.isDeleted = :isDeleted", { isDeleted: false })
 			.andWhere("schedule.isActive = :isActive", { isActive: true })
 			.leftJoinAndSelect("schedule.building", "building")
-			.leftJoinAndSelect("schexqsssssssqdule.facultet", "facultet")
+			.leftJoinAndSelect("schedule.facultet", "facultet")
 			.getMany();
 
 		// Hozirgi vaqtni olish

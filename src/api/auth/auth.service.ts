@@ -95,7 +95,7 @@ export class AuthService {
 				currentProvince: tmaStudent.user.currentProvince,
 				currentDistrict: tmaStudent.user.currentDistrict,
 				tmaUserId: tmaStudent.user.id,
-				course: 1,
+				course: +tmaStudent.user.level - 10,
 				facultetId: faculctet?.id,
 			});
 
