@@ -36,7 +36,7 @@ export class FacultetService extends BaseService<CreateFacultetDto, UpdateFacult
 			try {
 				// Mavjud fakultetni tekshirish (hemisFacultyId bo'yicha)
 				const existingFaculty = await this.repo.findOne({
-					where: { hemisFacultyId: externalFaculty.id },
+					where: { journalFacultyId: externalFaculty.id },
 				});
 
 				if (existingFaculty) {
@@ -48,7 +48,7 @@ export class FacultetService extends BaseService<CreateFacultetDto, UpdateFacult
 					// Agar mavjud bo'lmasa, yangi yaratish
 					const newFaculty = this.repo.create({
 						name: externalFaculty.name,
-						hemisFacultyId: externalFaculty.id,
+						journalFacultyId: externalFaculty.id,
 						buildingId: null as any, // Keyinchalik admin tomonidan belgilanadi
 					});
 					await this.repo.save(newFaculty);
@@ -56,7 +56,7 @@ export class FacultetService extends BaseService<CreateFacultetDto, UpdateFacult
 				}
 			} catch (error: any) {
 				errors.push({
-					hemisFacultyId: externalFaculty.id,
+					journalFacultyId: externalFaculty.id,
 					name: externalFaculty.name,
 					error: error?.message || 'Unknown error',
 				});

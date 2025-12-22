@@ -64,7 +64,7 @@ export class AuthService {
 
 			const hashedPassword = await BcryptEncryption.encrypt(dto.password);
 			const faculctet = await this.facultetRepo.findOneBy({
-				hemisFacultyId: tmaStudent.user.department,
+				journalFacultyId: tmaStudent.user.department,
 			});
 
 			const newStudent = this.studentRepo.create({

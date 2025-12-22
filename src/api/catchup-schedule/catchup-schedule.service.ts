@@ -103,7 +103,7 @@ export class CatchupScheduleService extends BaseService<
 		// Agar hemisFacultyIds berilgan bo'lsa, ularni tekshirish
 		if (dto.hemisFacultyIds && dto.hemisFacultyIds.length > 0) {
 			const faculties = await this.facultetRepo.find({
-				where: { hemisFacultyId: In(dto.hemisFacultyIds), isDeleted: false },
+				where: { journalFacultyId: In(dto.hemisFacultyIds), isDeleted: false },
 				relations: { building: true },
 			});
 
@@ -139,8 +139,8 @@ export class CatchupScheduleService extends BaseService<
 
 			// Faqat hemisFacultyId bo'lgan fakultetlarni olish
 			hemisFacultiesToCreate = allFaculties
-				.filter((f) => f.hemisFacultyId !== null && f.hemisFacultyId !== undefined)
-				.map((f) => f.hemisFacultyId!);
+				.filter((f) => f.journalFacultyId !== null && f.journalFacultyId !== undefined)
+				.map((f) => f.journalFacultyId!);
 
 			// Agar hech qanday fakultetda hemisFacultyId bo'lmasa
 			if (hemisFacultiesToCreate.length === 0) {
