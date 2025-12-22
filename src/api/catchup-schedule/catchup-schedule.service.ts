@@ -374,7 +374,6 @@ export class CatchupScheduleService extends BaseService<
 		return statistics;
 	}
 
-
 	async writeQueueStudent(
 		studentId: number,
 		catchupScheduleId: number,
@@ -536,6 +535,13 @@ export class CatchupScheduleService extends BaseService<
 			where: whereCondition,
 			relations: { student: true },
 			order: { queueNumber: "ASC" },
+			select: {
+				id: true,
+				status: true,
+				selectedTimeSlot: true,
+				queueNumber: true,
+				student: { id: true, hemisId: true, fullname: true, course: true },
+			},
 		});
 
 		return catchupScheduleStudent;
