@@ -22,7 +22,7 @@ export class BaseService<CreateDto, UpdateDto, Entity> {
 	async findAll(options?: IFindOptions<Entity>): Promise<Entity[]> {
 		const data = (await this.repository.find({
 			...options,
-		})) as Entity[];		
+		})) as Entity[];
 		return data;
 	}
 
@@ -60,10 +60,7 @@ export class BaseService<CreateDto, UpdateDto, Entity> {
 		return data;
 	}
 
-	async findOneById(
-		id: number,
-		options?: IFindOptions<Entity>,
-	): Promise<Entity> {
+	async findOneById(id: number, options?: IFindOptions<Entity>): Promise<Entity> {
 		const data = (await this.repository.findOne({
 			select: options?.select || {},
 			relations: options?.relations || [],

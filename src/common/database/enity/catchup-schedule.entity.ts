@@ -12,8 +12,8 @@ export class CatchupSchedule extends BaseEntity {
 	@Column({ type: "date", name: "date" })
 	public date!: Date;
 
-	@Column({ type: "int", name: "course" })
-	public course!: number;
+	@Column({ type: "json", name: "courses", default: [] })
+	public courses!: number[];
 
 	@Column({ type: "int", name: "buildingId" })
 	public buildingId!: number;

@@ -10,10 +10,15 @@ export class CreateCatchupScheduleDto {
   @IsNotEmpty()
   public date!: Date;
 
-  @ApiProperty()
+  @ApiProperty({
+    type: [Number],
+    description: "Kurs raqamlari (masalan: [1, 2, 3])",
+    example: [1, 2]
+  })
   @IsNotEmpty()
-  @Min(1)
-  public course!: number;
+  @IsArray()
+  @ArrayMinSize(1)
+  public courses!: number[];
 
   @ApiProperty()
   @IsNotEmpty()

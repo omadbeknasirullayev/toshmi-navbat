@@ -4,7 +4,15 @@ import { UpdateCatchupScheduleDto } from "./dto/update-catchup-schedule.dto";
 import { BaseService } from "src/infrastructure/lib/baseService";
 import { CatchupSchedule } from "src/common/database/enity/catchup-schedule.entity";
 import { InjectRepository } from "@nestjs/typeorm";
-import { In, MoreThanOrEqual, Not, Repository, LessThanOrEqual } from "typeorm";
+import {
+	In,
+	MoreThanOrEqual,
+	Not,
+	Repository,
+	LessThanOrEqual,
+	FindManyOptions,
+	FindOptionsWhereProperty,
+} from "typeorm";
 import { Student } from "src/common/database/enity";
 import { CatchupScheduleStudent } from "src/common/database/enity/catchup-schedule-student.entity";
 import { CatchupScheduleStudentStatus } from "src/common/database/Enums";
@@ -15,6 +23,7 @@ import { Facultet } from "src/common/database/enity/facultet.entity";
 import { StudentLowPerformance } from "src/common/database/enity/student-low-performance.entity";
 import { HikvisionFaceEventDto } from "./dto/hikvision-face-event.dto";
 import { CatchupScheduleFacultet } from "src/common/database/enity/catchup-schedule-facultet.entity";
+import { GetCatchupStudentsDto } from "./dto/get-catchup-students.dto";
 
 @Injectable()
 export class CatchupScheduleService extends BaseService<
@@ -186,7 +195,7 @@ export class CatchupScheduleService extends BaseService<
 		const catchupSchedule = this.repo.create({
 			name: dto.name,
 			date: dto.date,
-			course: dto.course,
+			courses: dto.courses,
 			buildingId: dto.buildingId,
 			startTime: dto.startTime,
 			endTime: dto.endTime,
@@ -266,22 +275,19 @@ export class CatchupScheduleService extends BaseService<
 		today.setHours(0, 0, 0, 0);
 
 		// Studentga tegishli otrabotkalarni topish:
-		// 1. Student kursi mos kelishi kerak
+		// 1. Student kursi courses array'ida bo'lishi kerak
 		// 2. Student fakulteti buildingida bo'lishi kerak
-		// 3. hemisFacultyId student department'iga teng YOKI null bo'lishi kerak (barcha fakultetlar uchun)
+		// 3. Student fakulteti jadvalga bog'langan bo'lishi kerak (many-to-many)
 		const schedules = await this.repo
 			.createQueryBuilder("schedule")
-			.where("schedule.course = :course", { course: student.course })
+			.where("JSON_CONTAINS(schedule.courses, :course)", { course: student.course })
 			.andWhere("schedule.date >= :today", { today })
 			.andWhere("schedule.buildingId = :buildingId", {
 				buildingId: student.facultet.buildingId,
 			})
-			.innerJoin(
-				"schedule.facultets",
-				"csf",
-				"csf.facultetId = :facultetId",
-				{ facultetId: student.facultet.id }
-			)
+			.innerJoin("schedule.facultets", "csf", "csf.facultetId = :facultetId", {
+				facultetId: student.facultet.id,
+			})
 			.andWhere("schedule.isDeleted = :isDeleted", { isDeleted: false })
 			.andWhere("schedule.isActive = :isActive", { isActive: true })
 			.leftJoinAndSelect("schedule.building", "building")
@@ -368,10 +374,6 @@ export class CatchupScheduleService extends BaseService<
 		return statistics;
 	}
 
-	async remove(id: number) {
-		await this.repo.delete(id);
-		return { message: "Catchup schedule deleted successfully" };
-	}
 
 	async writeQueueStudent(
 		studentId: number,
@@ -412,7 +414,7 @@ export class CatchupScheduleService extends BaseService<
 		}
 
 		// Student fakulteti catchup schedule'ning fakultetlari ichida borligini tekshirish
-		const facultetIds = catchup.facultets?.map(csf => csf.facultetId) || [];
+		const facultetIds = catchup.facultets?.map((csf) => csf.facultetId) || [];
 		if (!facultetIds.includes(student.facultet.id)) {
 			throw new HttpException(errorPrompt.studentFacultyNotMatchSchedule, 400);
 		}
@@ -513,6 +515,32 @@ export class CatchupScheduleService extends BaseService<
 		});
 	}
 
+	async getCatchupStudents(dto: GetCatchupStudentsDto) {
+		let whereCondition: FindOptionsWhereProperty<CatchupScheduleStudent> = {
+			catchupScheduleId: dto.catchupScheduleId,
+		};
+
+		if (dto.selectedTimeSlot) {
+			whereCondition.selectedTimeSlot = dto.selectedTimeSlot;
+		}
+
+		if (dto.status) {
+			whereCondition.status = dto.status;
+		}
+
+		if (dto.hemisId) {
+			whereCondition.student = { hemisId: dto.hemisId };
+		}
+
+		const catchupScheduleStudent = await this.catchupScheduleStudentRepo.find({
+			where: whereCondition,
+			relations: { student: true },
+			order: { queueNumber: "ASC" },
+		});
+
+		return catchupScheduleStudent;
+	}
+
 	async pendingStudents(catchupScheduleId: number) {
 		const catchup = await this.repo.find({
 			where: {
@@ -527,63 +555,63 @@ export class CatchupScheduleService extends BaseService<
 		return catchup;
 	}
 
-	async toArrivedStudent(catchupScheduleStudentId: number) {
-		const catchupScheduleStudent = await this.catchupScheduleStudentRepo.findOne({
-			where: { id: catchupScheduleStudentId },
-			relations: { student: { facultet: true }, catchupSchedule: true },
-		});
+	// async toArrivedStudent(catchupScheduleStudentId: number) {
+	// 	const catchupScheduleStudent = await this.catchupScheduleStudentRepo.findOne({
+	// 		where: { id: catchupScheduleStudentId },
+	// 		relations: { student: { facultet: true }, catchupSchedule: true },
+	// 	});
 
-		if (!catchupScheduleStudent) {
-			throw new HttpException(errorPrompt.catchupScheduleStudentNotFound, 404);
-		}
+	// 	if (!catchupScheduleStudent) {
+	// 		throw new HttpException(errorPrompt.catchupScheduleStudentNotFound, 404);
+	// 	}
 
-		// Agar allaqachon kelgan bo'lsa
-		if (catchupScheduleStudent.status === CatchupScheduleStudentStatus.ARRIVED) {
-			throw new HttpException(
-				{
-					status: "BAD_REQUEST",
-					message: {
-						uz: "Student allaqachon keldi statusida!",
-						ru: "Студент уже находится в статусе прибыл!",
-					},
-				},
-				400,
-			);
-		}
+	// 	// Agar allaqachon kelgan bo'lsa
+	// 	if (catchupScheduleStudent.status === CatchupScheduleStudentStatus.ARRIVED) {
+	// 		throw new HttpException(
+	// 			{
+	// 				status: "BAD_REQUEST",
+	// 				message: {
+	// 					uz: "Student allaqachon keldi statusida!",
+	// 					ru: "Студент уже находится в статусе прибыл!",
+	// 				},
+	// 			},
+	// 			400,
+	// 		);
+	// 	}
 
-		// Statusni o'zgartirish
-		catchupScheduleStudent.status = CatchupScheduleStudentStatus.ARRIVED;
-		await this.catchupScheduleStudentRepo.save(catchupScheduleStudent);
+	// 	// Statusni o'zgartirish
+	// 	catchupScheduleStudent.status = CatchupScheduleStudentStatus.ARRIVED;
+	// 	await this.catchupScheduleStudentRepo.save(catchupScheduleStudent);
 
-		// Catchup schedule'dagi attendeesCount ni oshirish
-		const catchup = await this.repo.findOne({
-			where: { id: catchupScheduleStudent.catchupScheduleId },
-		});
+	// 	// Catchup schedule'dagi attendeesCount ni oshirish
+	// 	const catchup = await this.repo.findOne({
+	// 		where: { id: catchupScheduleStudent.catchupScheduleId },
+	// 	});
 
-		if (catchup) {
-			catchup.attendeesCount += 1;
-			await this.repo.save(catchup);
-		}
+	// 	if (catchup) {
+	// 		catchup.attendeesCount += 1;
+	// 		await this.repo.save(catchup);
+	// 	}
 
-		return {
-			success: true,
-			message: "Student muvaffaqiyatli keldi statusiga o'tkazildi",
-			student: {
-				id: catchupScheduleStudent.student.id,
-				hemisId: catchupScheduleStudent.student.hemisId,
-				name: catchupScheduleStudent.student.fullname,
-				facultet: catchupScheduleStudent.student.facultet?.name,
-			},
-			schedule: {
-				id: catchupScheduleStudent.catchupScheduleId,
-				name: catchupScheduleStudent.catchupSchedule.name,
-				date: catchupScheduleStudent.catchupSchedule.date,
-				selectedTimeSlot: catchupScheduleStudent.selectedTimeSlot,
-				queueNumber: catchupScheduleStudent.queueNumber,
-			},
-			markedAt: new Date().toISOString(),
-		};
-	}
+	// 	return {
+	// 		success: true,
+	// 		message: "Student muvaffaqiyatli keldi statusiga o'tkazildi",
+	// 		student: {
+	// 			id: catchupScheduleStudent.student.id,
+	// 			hemisId: catchupScheduleStudent.student.hemisId,
+	// 			name: catchupScheduleStudent.student.fullname,
+	// 			facultet: catchupScheduleStudent.student.facultet?.name,
+	// 		},
+	// 		schedule: {
+	// 			id: catchupScheduleStudent.catchupScheduleId,
+	// 			name: catchupScheduleStudent.catchupSchedule.name,
+	// 			date: catchupScheduleStudent.catchupSchedule.date,
+	// 			selectedTimeSlot: catchupScheduleStudent.selectedTimeSlot,
+	// 			queueNumber: catchupScheduleStudent.queueNumber,
+	// 		},
+	// 		markedAt: new Date().toISOString(),
+	// 	};
+	// }
 
 	/**
 	 * Student hemisId va catchupScheduleId orqali keldi qilish

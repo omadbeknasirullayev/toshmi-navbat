@@ -8,6 +8,7 @@ import {
 	Delete,
 	ParseIntPipe,
 	UseGuards,
+	Query,
 } from "@nestjs/common";
 import { CatchupScheduleService } from "./catchup-schedule.service";
 import { CreateCatchupScheduleDto } from "./dto/create-catchup-schedule.dto";
@@ -24,6 +25,7 @@ import { Public } from "../auth/decorator";
 import { ScanQrDto } from "./dto/scan-qr.dto";
 import { HikvisionFaceEventDto } from "./dto/hikvision-face-event.dto";
 import { MarkArrivedDto } from "./dto/mark-arrived.dto";
+import { GetCatchupStudentsDto } from "./dto/get-catchup-students.dto";
 
 @Controller("catchup-schedule")
 @UseGuards(JwtAuthGuard, RolesGuard)
@@ -77,6 +79,16 @@ export class CatchupScheduleController {
 	@RolesDecorator(RolesEnum.STUDENT)
 	findByStudent(@CurrentUser() user: AuthPayload) {
 		return this.catchupScheduleService.findByStudentId(user.id);
+	}
+
+	@Get("by-catchup-schedule")
+	@ApiOperation({
+		summary: "for student",
+		description: "",
+	})
+	@RolesDecorator(RolesEnum.SUPER_ADMIN, RolesEnum.SUPERVISOR)
+	getCatchupStudents(@Query() query: GetCatchupStudentsDto) {
+		return this.catchupScheduleService.getCatchupStudents(query);
 	}
 
 	@Get("time-slot-statistics/:catchupScheduleId")
@@ -134,17 +146,17 @@ export class CatchupScheduleController {
 		return { ...catchupSchedule, timeSlotStatistics };
 	}
 
-	@Patch("toArrived-student/:catchupScheduleStudentId")
-	@ApiOperation({
-		summary: "for admin",
-		description:
-			"Admin tomonidan qo'lda studentni keldi statusiga o'tkazish. catchupScheduleStudentId (student navbat ID) ni yuborish kerak. Attendees count avtomatik oshiriladi.",
-	})
-	toArrivedStudent(
-		@Param("catchupScheduleStudentId", ParseIntPipe) catchupScheduleStudentId: number,
-	) {
-		return this.catchupScheduleService.toArrivedStudent(catchupScheduleStudentId);
-	}
+	// @Patch("toArrived-student/:catchupScheduleStudentId")
+	// @ApiOperation({
+	// 	summary: "for admin",
+	// 	description:
+	// 		"Admin tomonidan qo'lda studentni keldi statusiga o'tkazish. catchupScheduleStudentId (student navbat ID) ni yuborish kerak. Attendees count avtomatik oshiriladi.",
+	// })
+	// toArrivedStudent(
+	// 	@Param("catchupScheduleStudentId", ParseIntPipe) catchupScheduleStudentId: number,
+	// ) {
+	// 	return this.catchupScheduleService.toArrivedStudent(catchupScheduleStudentId);
+	// }
 
 	@Post("mark-arrived")
 	@ApiOperation({
@@ -189,6 +201,6 @@ export class CatchupScheduleController {
 	@Delete(":id")
 	@ApiOperation({ summary: "for admin" })
 	remove(@Param("id", ParseIntPipe) id: number) {
-		return this.catchupScheduleService.remove(+id);
+		return this.catchupScheduleService.delete(+id);
 	}
 }
