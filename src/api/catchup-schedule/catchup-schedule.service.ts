@@ -541,19 +541,19 @@ export class CatchupScheduleService extends BaseService<
 		return catchupScheduleStudent;
 	}
 
-	async pendingStudents(catchupScheduleId: number) {
-		const catchup = await this.repo.find({
-			where: {
-				id: catchupScheduleId,
-				isActive: true,
-				isDeleted: false,
-				students: { status: CatchupScheduleStudentStatus.PENDING },
-			},
-			relations: { building: true, students: { student: true } },
-		});
+	// async pendingStudents(catchupScheduleId: number) {
+	// 	const catchup = await this.repo.find({
+	// 		where: {
+	// 			id: catchupScheduleId,
+	// 			isActive: true,
+	// 			isDeleted: false,
+	// 			students: { status: CatchupScheduleStudentStatus.PENDING },
+	// 		},
+	// 		relations: { building: true, students: { student: true } },
+	// 	});
 
-		return catchup;
-	}
+	// 	return catchup;
+	// }
 
 	// async toArrivedStudent(catchupScheduleStudentId: number) {
 	// 	const catchupScheduleStudent = await this.catchupScheduleStudentRepo.findOne({

@@ -29,19 +29,19 @@ import { CurrentUser } from "src/common/decorator/current-user";
 export class TwoMbController {
 	constructor(private readonly twoMbService: TwoMbService) {}
 
-	@Post()
-	@RolesDecorator(RolesEnum.SUPER_ADMIN, RolesEnum.SUPERVISOR)
-	@ApiOperation({ summary: "Create 2MB record - for admin" })
-	create(@Body() dto: CreateTwoMbDto) {
-		return this.twoMbService.create(dto);
-	}
+	// @Post()
+	// @RolesDecorator(RolesEnum.SUPER_ADMIN, RolesEnum.SUPERVISOR)
+	// @ApiOperation({ summary: "Create 2MB record - for admin" })
+	// create(@Body() dto: CreateTwoMbDto) {
+	// 	return this.twoMbService.create(dto);
+	// }
 
-	@Get()
-	@RolesDecorator(RolesEnum.SUPER_ADMIN, RolesEnum.SUPERVISOR)
-	@ApiOperation({ summary: "Get all 2MB records - for admin" })
-	findAll() {
-		return this.twoMbService.findAll({ where: { isDeleted: false } });
-	}
+	// @Get()
+	// @RolesDecorator(RolesEnum.SUPER_ADMIN, RolesEnum.SUPERVISOR)
+	// @ApiOperation({ summary: "Get all 2MB records - for admin" })
+	// findAll() {
+	// 	return this.twoMbService.findAll({ where: { isDeleted: false } });
+	// }
 
 	@Get("my-records")
 	@RolesDecorator(RolesEnum.STUDENT)
@@ -52,34 +52,34 @@ export class TwoMbController {
 		return this.twoMbService.findByStudentId(user.id);
 	}
 
-	@Get("student/:studentId")
-	@RolesDecorator(RolesEnum.SUPER_ADMIN, RolesEnum.SUPERVISOR)
-	@ApiOperation({ summary: "Get 2MB records by student ID - for admin" })
-	async getByStudentId(
-		@Param("studentId", ParseIntPipe) studentId: number,
-	) {
+	// @Get("student/:studentId")
+	// @RolesDecorator(RolesEnum.SUPER_ADMIN, RolesEnum.SUPERVISOR)
+	// @ApiOperation({ summary: "Get 2MB records by student ID - for admin" })
+	// async getByStudentId(
+	// 	@Param("studentId", ParseIntPipe) studentId: number,
+	// ) {
 
-		return this.twoMbService.findByStudentId(studentId);
-	}
+	// 	return this.twoMbService.findByStudentId(studentId);
+	// }
 
-	@Get(":id")
-	@RolesDecorator(RolesEnum.SUPER_ADMIN, RolesEnum.SUPERVISOR)
-	@ApiOperation({ summary: "Get single 2MB record - for admin" })
-	findOne(@Param("id", ParseIntPipe) id: number) {
-		return this.twoMbService.findOneById(id, { where: { isDeleted: false } });
-	}
+	// @Get(":id")
+	// @RolesDecorator(RolesEnum.SUPER_ADMIN, RolesEnum.SUPERVISOR)
+	// @ApiOperation({ summary: "Get single 2MB record - for admin" })
+	// findOne(@Param("id", ParseIntPipe) id: number) {
+	// 	return this.twoMbService.findOneById(id, { where: { isDeleted: false } });
+	// }
 
-	@Patch(":id")
-	@RolesDecorator(RolesEnum.SUPER_ADMIN, RolesEnum.SUPERVISOR)
-	@ApiOperation({ summary: "Update 2MB record - for admin" })
-	update(@Param("id", ParseIntPipe) id: number, @Body() dto: UpdateTwoMbDto) {
-		return this.twoMbService.update(id, dto);
-	}
+	// @Patch(":id")
+	// @RolesDecorator(RolesEnum.SUPER_ADMIN, RolesEnum.SUPERVISOR)
+	// @ApiOperation({ summary: "Update 2MB record - for admin" })
+	// update(@Param("id", ParseIntPipe) id: number, @Body() dto: UpdateTwoMbDto) {
+	// 	return this.twoMbService.update(id, dto);
+	// }
 
-	@Delete(":id")
-	@RolesDecorator(RolesEnum.SUPER_ADMIN, RolesEnum.SUPERVISOR)
-	@ApiOperation({ summary: "Delete 2MB record - for admin" })
-	remove(@Param("id", ParseIntPipe) id: number) {
-		return this.twoMbService.delete(id);
-	}
+	// @Delete(":id")
+	// @RolesDecorator(RolesEnum.SUPER_ADMIN, RolesEnum.SUPERVISOR)
+	// @ApiOperation({ summary: "Delete 2MB record - for admin" })
+	// remove(@Param("id", ParseIntPipe) id: number) {
+	// 	return this.twoMbService.delete(id);
+	// }
 }

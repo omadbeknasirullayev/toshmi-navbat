@@ -83,7 +83,7 @@ export class CatchupScheduleController {
 
 	@Get("by-catchup-schedule")
 	@ApiOperation({
-		summary: "for student",
+		summary: "for admin",
 		description: "",
 	})
 	@RolesDecorator(RolesEnum.SUPER_ADMIN, RolesEnum.SUPERVISOR)
@@ -113,25 +113,25 @@ export class CatchupScheduleController {
 		return this.catchupScheduleService.getQueueStudent(user.id);
 	}
 
-	@Get("pending-students/:catchupScheduleId")
-	@ApiOperation({
-		summary: "for all",
-		description: "Umumiy monitorda shu jadval uchun hali kelmagan studentlarni ko'rish uchun",
-	})
-	@Public()
-	pendingStudents(@Param("catchupScheduleId", ParseIntPipe) catchupScheduleId: number) {
-		return this.catchupScheduleService.pendingStudents(catchupScheduleId);
-	}
+	// @Get("pending-students/:catchupScheduleId")
+	// @ApiOperation({
+	// 	summary: "for all",
+	// 	description: "Umumiy monitorda shu jadval uchun hali kelmagan studentlarni ko'rish uchun",
+	// })
+	// @Public()
+	// pendingStudents(@Param("catchupScheduleId", ParseIntPipe) catchupScheduleId: number) {
+	// 	return this.catchupScheduleService.pendingStudents(catchupScheduleId);
+	// }
 
-	@Get("pending-students-admin/:catchupScheduleId")
-	@ApiOperation({
-		summary: "for admin",
-		description:
-			"adminlar uchun catchup schedule yani otrabotka ga yozilgan studentlarni ko'rish uchun",
-	})
-	pendingStudentsAdmin(@Param("catchupScheduleId", ParseIntPipe) catchupScheduleId: number) {
-		return this.catchupScheduleService.pendingStudents(catchupScheduleId);
-	}
+	// @Get("pending-students-admin/:catchupScheduleId")
+	// @ApiOperation({
+	// 	summary: "for admin",
+	// 	description:
+	// 		"adminlar uchun catchup schedule yani otrabotka ga yozilgan studentlarni ko'rish uchun",
+	// })
+	// pendingStudentsAdmin(@Param("catchupScheduleId", ParseIntPipe) catchupScheduleId: number) {
+	// 	return this.catchupScheduleService.pendingStudents(catchupScheduleId);
+	// }
 
 	@Get(":id")
 	@ApiOperation({ summary: "for admin" })
