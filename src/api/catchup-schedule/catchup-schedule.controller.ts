@@ -66,6 +66,7 @@ export class CatchupScheduleController {
 	findAll() {
 		return this.catchupScheduleService.findAll({
 			where: { isDeleted: false },
+			order: { createdAt: "DESC" },
 			relations: { building: true, facultets: { facultet: true } },
 		});
 	}
