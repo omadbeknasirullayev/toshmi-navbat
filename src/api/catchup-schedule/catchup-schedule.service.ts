@@ -24,6 +24,7 @@ import { StudentLowPerformance } from "src/common/database/enity/student-low-per
 import { HikvisionFaceEventDto } from "./dto/hikvision-face-event.dto";
 import { CatchupScheduleFacultet } from "src/common/database/enity/catchup-schedule-facultet.entity";
 import { GetCatchupStudentsDto } from "./dto/get-catchup-students.dto";
+import { ExternalService } from "../external/external.service";
 
 @Injectable()
 export class CatchupScheduleService extends BaseService<
@@ -49,8 +50,94 @@ export class CatchupScheduleService extends BaseService<
 
 		@InjectRepository(CatchupScheduleFacultet)
 		private readonly catchupScheduleFacultetRepo: Repository<CatchupScheduleFacultet>,
+
+		private readonly externalService: ExternalService,
 	) {
 		super(repo, "Catchup Schedule");
+	}
+
+	/**
+	 * Telegram kanalga xabar yuborish
+	 */
+	private async sendTelegramNotification(
+		catchupSchedule: CatchupSchedule,
+		facultets: Facultet[],
+	): Promise<void> {
+		if (!appConfig.TELEGRAM_BOT_TOKEN || !appConfig.TELEGRAM_CHAT_ID) {
+			console.log("Telegram bot token yoki chat ID sozlanmagan");
+			return;
+		}
+
+		try {
+			const date = new Date(catchupSchedule.date);
+			const formattedDate = date.toLocaleDateString("uz-UZ", {
+				year: "numeric",
+				month: "long",
+				day: "numeric",
+			});
+
+			const facultetNames = facultets.map((f) => f.name).join("\n• ");
+			const courses = catchupSchedule.courses.join(", ");
+
+			let message = `📢 <b>Yangi Otrabotka Jadvali Yaratildi!</b>\n\n`;
+			message += `📋 <b>Jadval nomi:</b> ${catchupSchedule.name}\n\n`;
+			message += `📅 <b>Sana:</b> ${formattedDate}\n`;
+			message += `🕐 <b>Test vaqti:</b> ${catchupSchedule.startTime} - ${catchupSchedule.endTime}\n\n`;
+
+			if (catchupSchedule.registrationStartTime && catchupSchedule.registrationEndTime) {
+				const regStart = new Date(catchupSchedule.registrationStartTime);
+				const regEnd = new Date(catchupSchedule.registrationEndTime);
+
+				const regStartFormatted = regStart.toLocaleString("uz-UZ", {
+					year: "numeric",
+					month: "long",
+					day: "numeric",
+					hour: "2-digit",
+					minute: "2-digit",
+					timeZone: "Asia/Tashkent",
+				});
+
+				const regEndFormatted = regEnd.toLocaleString("uz-UZ", {
+					year: "numeric",
+					month: "long",
+					day: "numeric",
+					hour: "2-digit",
+					minute: "2-digit",
+					timeZone: "Asia/Tashkent",
+				});
+
+				message += `🎫 <b>Navbat olish vaqti:</b>\n`;
+				message += `   Boshlanish: ${regStartFormatted}\n`;
+				message += `   Tugash: ${regEndFormatted}\n\n`;
+			}
+
+			message += `🏢 <b>Bino:</b> ${catchupSchedule.building?.name || "Noma'lum"}\n`;
+			message += `🎓 <b>Kurslar:</b> ${courses}-kurslar\n`;
+			message += `🏛 <b>Fakultetlar:</b>\n• ${facultetNames}\n\n`;
+			message += `⏰ <b>Navbat vaqtlari:</b>\n`;
+			catchupSchedule.timeSlots.forEach((slot, index) => {
+				message += `   ${index + 1}. ${slot}\n`;
+			});
+
+			message += `\n✅ Navbat olish uchun tizimga kiring!`;
+
+			await this.externalService.axiosRequest({
+				method: "POST",
+				url: `https://api.telegram.org/bot${appConfig.TELEGRAM_BOT_TOKEN}/sendMessage`,
+				data: {
+					chat_id: appConfig.TELEGRAM_CHAT_ID,
+					text: message,
+					parse_mode: "HTML",
+				},
+				headers: {
+					"Content-Type": "application/json",
+				},
+			});
+
+			console.log("Telegram xabari muvaffaqiyatli yuborildi");
+		} catch (error) {
+			console.error("Telegram xabarini yuborishda xatolik:", error);
+		}
 	}
 
 	/**
@@ -113,6 +200,43 @@ export class CatchupScheduleService extends BaseService<
 
 	async create(dto: CreateCatchupScheduleDto) {
 		let facultetIdsToLink: number[] = [];
+
+		// Navbat olish vaqtlarini validatsiya qilish
+		if (dto.registrationStartTime && dto.registrationEndTime) {
+			const regStart = new Date(dto.registrationStartTime);
+			const regEnd = new Date(dto.registrationEndTime);
+
+			if (regStart >= regEnd) {
+				throw new HttpException(
+					{
+						status: "BAD_REQUEST",
+						message: {
+							uz: "Navbat olish boshlanish vaqti tugash vaqtidan oldin bo'lishi kerak!",
+							ru: "Время начала регистрации должно быть раньше времени окончания!",
+						},
+					},
+					400,
+				);
+			}
+
+			// Navbat olish tugash vaqti jadval boshlanish vaqtidan oldin bo'lishi kerak
+			const scheduleDateTime = new Date(dto.date);
+			const [hours, minutes] = dto.startTime.split(":").map(Number);
+			scheduleDateTime.setHours(hours, minutes, 0, 0);
+
+			if (regEnd > scheduleDateTime) {
+				throw new HttpException(
+					{
+						status: "BAD_REQUEST",
+						message: {
+							uz: "Navbat olish tugash vaqti jadval boshlanish vaqtidan oldin bo'lishi kerak!",
+							ru: "Время окончания регистрации должно быть до начала расписания!",
+						},
+					},
+					400,
+				);
+			}
+		}
 
 		// Agar facultetIds berilgan bo'lsa, ularni tekshirish
 		if (dto.facultetIds && dto.facultetIds.length > 0) {
@@ -200,6 +324,8 @@ export class CatchupScheduleService extends BaseService<
 			startTime: dto.startTime,
 			endTime: dto.endTime,
 			timeSlots,
+			registrationStartTime: dto.registrationStartTime,
+			registrationEndTime: dto.registrationEndTime,
 		});
 
 		const savedSchedule = await this.repo.save(catchupSchedule);
@@ -213,6 +339,22 @@ export class CatchupScheduleService extends BaseService<
 			});
 			const savedRelation = await this.catchupScheduleFacultetRepo.save(relation);
 			facultetRelations.push(savedRelation);
+		}
+
+		// Jadvalga tegishli fakultetlarni olish (Telegram uchun)
+		const facultetsForNotification = await this.facultetRepo.find({
+			where: { id: In(facultetIdsToLink), isDeleted: false },
+		});
+
+		// Building ma'lumotini olish
+		const scheduleWithBuilding = await this.repo.findOne({
+			where: { id: savedSchedule.id },
+			relations: { building: true },
+		});
+
+		// Telegram'ga xabar yuborish
+		if (scheduleWithBuilding) {
+			await this.sendTelegramNotification(scheduleWithBuilding, facultetsForNotification);
 		}
 
 		// Response ni fakultetlar bilan qaytarish
@@ -418,6 +560,39 @@ export class CatchupScheduleService extends BaseService<
 		const facultetIds = catchup.facultets?.map((csf) => csf.facultetId) || [];
 		if (!facultetIds.includes(student.facultet.id)) {
 			throw new HttpException(errorPrompt.studentFacultyNotMatchSchedule, 400);
+		}
+
+		// Navbat olish vaqtini tekshirish
+		if (catchup.registrationStartTime && catchup.registrationEndTime) {
+			const now = new Date();
+			const regStart = new Date(catchup.registrationStartTime);
+			const regEnd = new Date(catchup.registrationEndTime);
+
+			if (now < regStart) {
+				throw new HttpException(
+					{
+						status: "BAD_REQUEST",
+						message: {
+							uz: `Navbat olish ${regStart.toLocaleString("uz-UZ")} dan boshlanadi!`,
+							ru: `Регистрация начнется ${regStart.toLocaleString("ru-RU")}!`,
+						},
+					},
+					400,
+				);
+			}
+
+			if (now > regEnd) {
+				throw new HttpException(
+					{
+						status: "BAD_REQUEST",
+						message: {
+							uz: `Navbat olish vaqti ${regEnd.toLocaleString("uz-UZ")} da tugadi!`,
+							ru: `Время регистрации закончилось ${regEnd.toLocaleString("ru-RU")}!`,
+						},
+					},
+					400,
+				);
+			}
 		}
 
 		// Tanlangan vaqt slot mavjudligini tekshirish

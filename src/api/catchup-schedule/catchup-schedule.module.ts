@@ -8,11 +8,12 @@ import { CatchupScheduleStudent } from "src/common/database/enity/catchup-schedu
 import { Facultet } from "src/common/database/enity/facultet.entity";
 import { StudentLowPerformance } from "src/common/database/enity/student-low-performance.entity";
 import { CatchupScheduleFacultet } from "src/common/database/enity/catchup-schedule-facultet.entity";
+import { ExternalService } from "../external/external.service";
 
 @Module({
 	imports: [TypeOrmModule.forFeature([CatchupSchedule, Student, CatchupScheduleStudent, Facultet, StudentLowPerformance, CatchupScheduleFacultet])],
 	controllers: [CatchupScheduleController],
-	providers: [CatchupScheduleService],
+	providers: [CatchupScheduleService, ExternalService],
 	exports: [CatchupScheduleService],
 })
 export class CatchupScheduleModule {}

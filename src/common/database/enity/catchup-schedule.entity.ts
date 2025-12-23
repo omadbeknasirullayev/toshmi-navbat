@@ -33,6 +33,12 @@ export class CatchupSchedule extends BaseEntity {
 	@Column({ type: "json", name: "timeSlots", default: [] })
 	public timeSlots!: string[];
 
+	@Column({ type: "timestamp", name: "registrationStartTime", nullable: true })
+	public registrationStartTime!: Date;
+
+	@Column({ type: "timestamp", name: "registrationEndTime", nullable: true })
+	public registrationEndTime!: Date;
+
 	@ManyToOne(() => Building, (building) => building.catchupSchedules)
 	public building?: Building;
 

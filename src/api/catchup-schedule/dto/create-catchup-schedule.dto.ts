@@ -1,5 +1,5 @@
 import { ApiProperty } from "@nestjs/swagger";
-import { IsNotEmpty, Min, Matches, IsOptional, IsArray, ArrayMinSize } from "class-validator";
+import { IsNotEmpty, Min, Matches, IsOptional, IsArray, ArrayMinSize, IsDateString } from "class-validator";
 
 export class CreateCatchupScheduleDto {
   @ApiProperty()
@@ -48,4 +48,22 @@ export class CreateCatchupScheduleDto {
     message: "endTime must be in HH:mm format (e.g., 16:00)"
   })
   public endTime!: string;
+
+  @ApiProperty({
+    example: "2025-12-25T10:00:00Z",
+    description: "Navbat olish boshlanish vaqti (ISO 8601 formatda)",
+    required: false
+  })
+  @IsOptional()
+  @IsDateString()
+  public registrationStartTime?: Date;
+
+  @ApiProperty({
+    example: "2025-12-27T20:00:00Z",
+    description: "Navbat olish tugash vaqti (ISO 8601 formatda)",
+    required: false
+  })
+  @IsOptional()
+  @IsDateString()
+  public registrationEndTime?: Date;
 }

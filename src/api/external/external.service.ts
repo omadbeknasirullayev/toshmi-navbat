@@ -1,6 +1,8 @@
 import { Injectable } from "@nestjs/common";
 import { LoginTMADto } from "./dto/login-TMA.dto";
 import axios from "axios";
+import { appConfig } from "src/config/app.config";
+import { AxiosRequestDto } from "./dto/axios-request.dto";
 
 @Injectable()
 export class ExternalService {
@@ -32,7 +34,7 @@ export class ExternalService {
 				url: `https://e-journal.tashmeduni.uz/api/v1/journal/student/${hemisId}/low-performance`,
 				headers: {
 					"Content-Type": "application/json",
-					"X-API-TOKEN": "LP_API_9f3c7e1aB42D8KxQmR5YpZV0WnL6H",
+					"X-API-TOKEN": appConfig.JOURNAL_SECRET,
 				},
 			});
 			return response.data;
@@ -49,7 +51,7 @@ export class ExternalService {
 				url: `https://e-journal.tashmeduni.uz/api/v1/base/department/list/for-navbat/?page=1&page_size=200`,
 				headers: {
 					"Content-Type": "application/json",
-					"X-API-TOKEN": "LP_API_9f3c7e1aB42D8KxQmR5YpZV0WnL6H",
+					"X-API-TOKEN": appConfig.JOURNAL_SECRET,
 				},
 			});
 			return response.data;
@@ -58,5 +60,20 @@ export class ExternalService {
 			console.log(JSON.parse(JSON.stringify(error)));
 		}
 		return null;
+	}
+
+	public async axiosRequest(dto: AxiosRequestDto) {
+		try {
+			const request = await axios({
+				method: dto.method,
+				url: dto.url,
+				data: dto.data,
+				headers: dto.headers,
+			});
+			return request.data;
+		} catch (error) {
+			console.log(JSON.parse(JSON.stringify(error)));
+			return null;
+		}
 	}
 }

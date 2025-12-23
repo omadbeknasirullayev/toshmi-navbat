@@ -14,6 +14,9 @@ export type AppConfigType = {
 	TOKEN_KEY: string;
 	TOKEN_EXPIRE: number;
 	CATCHUP_SCHEDULE_INTERVAL: number;
+	JOURNAL_SECRET: string;
+	TELEGRAM_BOT_TOKEN: string;
+	TELEGRAM_CHAT_ID: string;
 };
 
 const requiredVariables = [
@@ -28,6 +31,7 @@ const requiredVariables = [
 	"TOKEN_KEY",
 	"TOKEN_EXPIRE",
 	"CATCHUP_SCHEDULE_INTERVAL",
+	"JOURNAL_SECRET",
 ];
 
 const missingVariables = requiredVariables.filter((variable) => {
@@ -54,4 +58,7 @@ export const appConfig: AppConfigType = {
 	TOKEN_KEY: process.env.TOKEN_KEY as string,
 	TOKEN_EXPIRE: parseInt(process.env.TOKEN_EXPIRE as string, 10),
 	CATCHUP_SCHEDULE_INTERVAL: parseInt(process.env.CATCHUP_SCHEDULE_INTERVAL as string, 10),
+	JOURNAL_SECRET: process.env.JOURNAL_SECRET as string,
+	TELEGRAM_BOT_TOKEN: process.env.TELEGRAM_BOT_TOKEN as string,
+	TELEGRAM_CHAT_ID: process.env.TELEGRAM_CHAT_ID as string,
 };
