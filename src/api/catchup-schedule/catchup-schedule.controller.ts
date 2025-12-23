@@ -99,6 +99,7 @@ export class CatchupScheduleController {
 		description:
 			"Har bir time slot uchun qancha student yozilganini ko'rish. Qaysi vaqtda bo'sh joy borligini aniqlash uchun",
 	})
+	@RolesDecorator(RolesEnum.STUDENT)
 	getTimeSlotStatistics(@Param("catchupScheduleId", ParseIntPipe) catchupScheduleId: number) {
 		return this.catchupScheduleService.getTimeSlotStatistics(catchupScheduleId);
 	}
