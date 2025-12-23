@@ -26,11 +26,13 @@ import { ScanQrDto } from "./dto/scan-qr.dto";
 import { HikvisionFaceEventDto } from "./dto/hikvision-face-event.dto";
 import { MarkArrivedDto } from "./dto/mark-arrived.dto";
 import { GetCatchupStudentsDto } from "./dto/get-catchup-students.dto";
+import { ApiBearerAuth } from "@nestjs/swagger";
 
 @Controller("catchup-schedule")
 @UseGuards(JwtAuthGuard, RolesGuard)
 @RolesDecorator(RolesEnum.SUPER_ADMIN, RolesEnum.SUPERVISOR)
 @ApiTags("Catchup Schedule")
+@ApiBearerAuth()
 export class CatchupScheduleController {
 	constructor(private readonly catchupScheduleService: CatchupScheduleService) {}
 
@@ -87,7 +89,6 @@ export class CatchupScheduleController {
 		summary: "for admin",
 		description: "",
 	})
-	@RolesDecorator(RolesEnum.SUPER_ADMIN, RolesEnum.SUPERVISOR)
 	getCatchupStudents(@Query() query: GetCatchupStudentsDto) {
 		return this.catchupScheduleService.getCatchupStudents(query);
 	}
@@ -98,7 +99,6 @@ export class CatchupScheduleController {
 		description:
 			"Har bir time slot uchun qancha student yozilganini ko'rish. Qaysi vaqtda bo'sh joy borligini aniqlash uchun",
 	})
-	@Public()
 	getTimeSlotStatistics(@Param("catchupScheduleId", ParseIntPipe) catchupScheduleId: number) {
 		return this.catchupScheduleService.getTimeSlotStatistics(catchupScheduleId);
 	}

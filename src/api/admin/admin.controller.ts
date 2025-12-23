@@ -32,7 +32,8 @@ export class AdminController {
 	constructor(private readonly adminService: AdminService) {}
 
 	@Post()
-	@Public()
+	// @Public()
+	@RolesDecorator(RolesEnum.SUPER_ADMIN)
 	create(@Body() dto: CreateAdminDto) {
 		return this.adminService.create(dto);
 	}
