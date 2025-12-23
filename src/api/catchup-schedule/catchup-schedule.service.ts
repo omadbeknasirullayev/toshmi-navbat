@@ -280,7 +280,9 @@ export class CatchupScheduleService extends BaseService<
 		// 3. Student fakulteti jadvalga bog'langan bo'lishi kerak (many-to-many)
 		const schedules = await this.repo
 			.createQueryBuilder("schedule")
-			.where("JSON_CONTAINS(schedule.courses, :course)", { course: student.course })
+			.where("schedule.courses::jsonb @> :course::jsonb", {
+				course: JSON.stringify([student.course])
+			})
 			.andWhere("schedule.date >= :today", { today })
 			.andWhere("schedule.buildingId = :buildingId", {
 				buildingId: student.facultet.buildingId,
